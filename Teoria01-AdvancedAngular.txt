@@ -1,1 +1,168 @@
+				SECCION 6 DIRECTIVAS DE COMUNICACION @INPUT Y @OUTPUT
+
+Esta sección esta dedicada a los componentes y el envío de información entre ellos
+
+1- Trabajaremos con Outputs, Inputs y ViewChild
+2- Aprenderemos como utilizar atributos personalizados
+3- Crearemos un componente re utilizable con una funcionalidad en especifico
+4- Aprenderemos a tener referencias a elementos HTML
+5- Tips de JavaScript puro: colocar el foco en elementos
+6- Uso de gráficas como componentes personalizados
+
+Al finalizar la sección, subiremos los cambios a GitHub, crearemos un release tag y también se encuentran unas tareas
+
+					VIDEO 47 COMPONENTE PROGRESS BAR
+
+Fijate que cuando me pase un diseñador un tema lo puedo abrir en el navegador y elegir un componente y copiarme el etiquetado html,tal como hacemos en este video
+Tambien puedo seleccionar 'copiar dirección del link' tras poner el cursor en una etiqueta <link rel="stylesheet"> para ver los estilos de ese link.
+En resumen me puedo copiar tanto el html como el css.
+
+Con esto en mente copiamos la gráfica y el input group y sus estilos,es seguir el video
+
+				VIDEO 48 CREAR COMPONENTE INCREMENTADOR
+
+Para inferir a la template la propiedad progreso tenemos varias formas:
+   style="height:10px;" 
+   [style.width]="progreso+'%'"
+Fijate como puedo usar [style.property]="propertyName" donde propertyName es una propiedad de la clase y la primera property una propiedad CSS.
+Sin embargo,como es una sintaxis extraña mejor usamos un getter que me devuelva el valor normalizado.
+
+  get getPorcentaje() { 
+    return `${this.progreso}%`;
+   }
+
+Recuerda que para poder usar [(ngModel)]="progreso" hay que traer o el FormsModule o el ReactiveFormsModule en el modulo al que pertenezca ese control de formulario(en este caso un <input>).
+
+					VIDEO 48 CREAR COMPONENTE INCREMENTADOR
+
+Nuestra barra de progreso funciona bien,pero,¿y si quisiera varios?.Lo mejor es crear un componente y abstraer la lógica(imagina que necesito 10 gráficas).Siempre hay que separar la lógica para poder reutilizarla.Además,como pueden ser varios lo mejor es crear un modulo(o los que se necesiten).
+Fijate como crear shared para los que sí que sé que va a haber varios y components para los que pudieran ser sólo únicos en la app también es una buena idea,asin.
+
+Fijate que aunque también voy a llamar al FormsModule en este modulo,pero Angular es inteligente y sólo va a pedirlo una vez,la siguiente vez que encuentre que se pide a un módulo que él ya ha pedido lo tendrá en una caché.
+
+						VIDEO 49 DIRECTIVA @INPUT 
+
+Esta directiva se usa para recibit propiedades en el hijo que previamente han sido pasadas desde el padre en el selector de componente.Fijate que el padre siempre es  el que tenga el selector de componente.
+Puedo usar el nombre que quiera como propiedad,o usar el mismo nombre que tendrá la propiedad,en el primer caso tendré que usar un argumento string en el @Input()
+
+En el padre usaré valor,pero la propiedad de clase se llama progreso
+<app-incrementador [valor]="15">
+En el hijo,dado que renombré la propiedad tendré que usar el arg en la directiva
+@Input('valor') progreso:number=50; <- si la hubiera llamado progreso en el padre no tengo que usar el arg,realmente es más legible no renombrar,salvo que tenga que hacerlo por alguna circusntancia.
+
+*NOTA: Fijate que como va a enlazar con una clase(y aunque sea la de el hijo,no la suya) hay que usar [valor]="15".Da igual de quien sea la clase,hay que usar one-qay data-binding
+
+				VIDEO 50 @OUTPUT & $EVENT EMISION DE EVENTOS HACIA EL PADRE
+
+Si bien con @Input se recibe algo,luego la debe mandar alguién,es decir el padre,con @Output emitiremos hacia arriba un evento.
+Usualmente las propiedades emitidas son de tipo EventEmitter<T>.Un EventEmitter debe saber qué tipo de información fluye a través de él,es por esto que es un genérico.
+
+Dado que queremos emitir un número para el porcentaje de progreso ya sabemos el tipo también:
+@Output() valorSalida:EventEmitter<number> = new EventEmitter(); <- hay  que inicializarlo para que no sea null,importante.
+
+  cambiarValor(valor: number) {
+    if (this.progreso >= 100 && valor > 0) {
+      this.valorSalida.emit(100);
+      return;
+    }
+    if (this.progreso <= 0 && valor < 0) {
+      this.valorSalida.emit(0);
+      return;
+    }
+    this.progreso = this.progreso + valor;
+    this.valorSalida.emit(this.progreso);
+  }
+
+* IMPORTANTE: fijate que valorSalida:EventEmitter<T> es una función.Para recogerla en el selector,en la template del padre,hay que usar la sintaxis de evento:
+<app-incrementador [valor]="15" (valorSalida)="cambioValorHijo($event)">
+* No sólo hay que recibirla con paréntesis,sino que para acceder a su contenido hay que usar la propiedad pre-built $event que Angular provee
+
+Realmente usar @Output va ligado a usar $event.Además,su tipo será el mismo que emitimos como genérico en el hijo(EventEmitter<number>) asi que es un number.Con todo esto en mente creo la función adecuada:
+cambioValorHijo(valor:number){
+  this.progresoUno=valor;
+
+Sin embargo,dado que es un number y habría que crear otra función,con una lógica tan sencilla podemos utilizar la vista simplemente y evitar dos funciones.
+
+ <app-incrementador 
+              [valor]="progresoUno"
+              (valorSalida)="progresoUno = $event"
+              ></app-incrementador>
+         </div>
+      </div>
+   </div>
+
+   <div class="col-6">
+      <div class="card">
+         <div class="card-body">
+            <app-incrementador
+            [valor]="progresoDos"
+            (valorSalida)="progresoDos = $event"
+            ></app-incrementador>
+
+Perfectamente puedo hacer "progresoDos = $event",ni que estuviera en HTML,tu.
+NOTAS: puedo usar two-way data-binding cuando usar @Input y @Output pero la convención dicta que ambas directivas se llamen igual,con la @Output concatenando 'Change'.Ejemplo:
+
+<app-incrementador [(progreso)]="progresoAzul"></app-incrementador>
+
+export class IncrementadorComponent implements OnInit {
  
+  @Input('progreso')
+  progreso: number = 50;
+ 
+  @Output('progresoChange')
+  valueChange: EventEmitter<number> = new EventEmitter();
+...
+}
+Por último esto es para componentes padre-hijo,con componentes hermanos se usa 
+this.router.getCurrentnavigation().extras(NavigationExtras)
+
+			VIDEO 51 [ngClass] COLOR DE LOS BOTONES DE FORMA CONDICIONAL
+
+Queremos aplicar una clase según sea uno u otro incrementador.Usaremos la directiva [ngClass].Fijate que usar [] significa que quiero tomar el valor literal de esa propiedad en la clase.Lo que sea que es su valor,lo pones en el html.
+
+ @Input() btnClass: string = 'btn btn-primary h-100';
+NOTA:fijate que estoy mezclando una propiedad con @Input y no me da fallo,ni siquiera he recibido algo desde el padre y ya usé btnClass con su valor por defecto en la template.Muy interesante.
+
+Realizar esto me dejará mandar desde el padre(o no mandar nada y actuar como una simple prop) una prop:string que sustituya al valor por defecto.
+
+Claro que una la mandará y la otra no.Es la unión de @Input,su valor por defecto y ahora [ngClass].Realmente Angular es buenísimo,asin.
+
+NOTA:fijate que acabo de decir que usar [] implica usar javascript y el valor literal:
+[btnClass]="btn btn-info h-100" <- esto va a reventar,pues en JS no puedes usar guiones
+También podría quitar las llaves para que lo interprete como un string,pero es una mala práctica porque Angular no sabe si quiero emitir o recibir.La solución es simplemente entrecomillar si hay guiones en cualquier literal al usar [] en Angular.
+
+IMPORTANTE: realmente no hace falta que le pase las tres clases.Fijate como tratamos a la propiedad @Input como una simple propiedad de la clase.En el NgOnInit preparamos todo.
+
+  ngOnInit(): void {
+    this.btnClass = `btn ${this.btnClass} h-100`;
+  }
+
+					VIDEO 52 PULIENDO DETALLES
+
+Al haber usado [(ngModel)] en un control de formulario,en ese mismo control tendré acceso a otro método llamado (ngModelChange).Lógicamente se dispara en cada cambio.LLamaremos a un método nuestro(es el onChange de react)
+
+* Usar ngModel permite subscribirme a cada cambio
+<input ... (ngModelChange)="onCustomChange($event)" [(ngModel)]="progreso">
+
+Este método onCustomChange(valor:number)(es un number porque es un input type number) simplemente va a cambiar la propiedad de la clase 'progreso':
+
+  onChange(valor: number) {
+    if(valor >= 100) {
+      this.progreso = 100;
+    } else if (valor <= 0) {
+      this.progreso = 0;
+    } else {
+      this.progreso = valor;
+    }
+    this.valorSalida.emit(this.progreso);
+  }
+
+Sabiendo que tengo en progreso siempre el valor tanto de los botones como ahora ddel input,y que ya no va a pasar de 0 o 100 podemos crear un estilo condicional con la directiva anterior [ngClass].Fijate que en el video anterior sólo la usamos para agregar una clase,pero no usamos condicionales en ella,sólo un literal.
+
+ [ngClass]="{'is-invalid':progreso > 100 || progreso < 0 }"
+Al usar condicionales me pedirá usar "{'class':condition}.Lógicamente,'class' va entrecomillado por los guiones y JS.
+
+							VIDEO 54 GRAFICAS EN ANGULAR
+
+
+
