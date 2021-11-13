@@ -1,0 +1,28 @@
+<div id="main-wrapper">
+  <app-header></app-header>
+  <app-sidebar></app-sidebar>
+
+  <div class="page-wrapper">
+
+    <div class="container-fluid">
+      <!-- breadcrumbs -->
+      <app-breadcrumbs></app-breadcrumbs>
+
+      <!-- Start Page Content -->
+      <!-- sistema de rutas -->
+      <router-outlet></router-outlet>
+
+      <!-- <app-rightbar></app-rightbar>   -->
+
+
+    </div>
+
+    <!-- footer -->
+    <!-- ============================================================== -->
+    <footer class="footer">
+      © {{year}} Admin Pro by wrappixel.com
+    </footer>
+    <!-- ============================================================== -->
+    <!-- End footer -->
+  </div>
+</div>
