@@ -164,5 +164,43 @@ Al usar condicionales me pedirá usar "{'class':condition}.Lógicamente,'class' 
 
 							VIDEO 54 GRAFICAS EN ANGULAR
 
+De nuevo vamos a usar ng2-charts ya que se ven muy bien sus gráficas:
+npm i ng2-charts chart.js <- fijate que me pide tanto la libreria base como la del framework y una esta en singular y la otra en plural.
+
+Dado que truly sólo voy a usar esto dentro de las pages,puedo importarlo en ese módulo interno en vez de en el principal.claro que ya verás cuando no sea así,asinto. 
+
+Fijate que voy a traer el ChartType de chart.js mientras que traeré Label,dataSet,... de ng2-charts.Es por esto que necesito las dos dependencias
+import { ChartType } from 'chart.js';
+import { MultiDataSet, Label } from 'ng2-charts';
+
+  
+   public doughnutChartLabels: Label[] = ['Download Sales', 'In-Store Sales', 'Mail-Order Sales'];
+   public doughnutChartData: MultiDataSet = [
+     [350, 450, 100],
+   ];
+
+Realmente no tiene nada crear la gráfica(fijate que le hemos pasado el type en la template para no usar otra propiedad de clase).
+
+				VIDEO 55 TAREA @INPUT Y @OUTPUT
+
+ De igual manera que abstraimos el componente incrementador queremos hacer lo mismo para la gráfica:
+ng g c components/dona --skips-tests -is
+
+Recuerda que lo que hay que hacer es no mandar la prop cuando quiero el valor por defecto!!
+ <div class="col-6">
+      <app-dona 
+        [titulo]="'Ventas'" 
+        [labels]="labels1"
+        [data]="data1"
+        [colors]="colors1" >
+         >
+      </app-dona>
+   </div>
+   
+   <div class="col-6">
+      <app-dona 
+        [titulo]="" 
+        >
+     >
 
 

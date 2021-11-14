@@ -32,7 +32,7 @@ import { PagesComponent } from './pages.component';
     SharedModule,
     RouterModule,
     FormsModule,
-    ComponentsModule
+    ComponentsModule,
   ]
 })
 export class PagesModule { }
