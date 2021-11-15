@@ -203,4 +203,109 @@ Recuerda que lo que hay que hacer es no mandar la prop cuando quiero el valor po
         >
      >
 
+		SECCION 7 SERVICIOS,ROUTING BASICO,PERSISTENCIA DE LOS AJUSTES,TEMAS,...
+
+Esta sección tiene varios temas importantes:
+
+1- Crearemos un módulo para agrupar todos nuestros servicios
+2- Aprenderemos a ejecutar scripts en archivos de JavaScript puros, en TypeScript
+3- LocalStorage
+4- Cambiar CSS de forma dinámica
+5- Crear un componente para los ajustes del tema
+6- Tips de JavaScript que se pueden usar en TypeScript
+7- Preparar el servicio del Sidebar, el cual usaremos más adelante para crear nuestro menú dinámico en base a las respuestas de nuestro backend server
+
+Al finalizar la sección creamos un release tag y hacemos un backup en git y github de todo el proyecto.
+NOTA: fijate que interesante el servicio para el sidebar.
+
+			VIDEO 62 DISEÑO INICIAL PAGE ACCOUNT-SETTINGS
+
+Poner esto para el warning de ng2-charts y desargar el colores.txt del video 61.
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+Creamos un nuevo componente,le creamos una ruta en pages.routing y copio el colores.txt suminstrado.
+
+			VIDEO 63 CAMBIAR CSS PRINCIPAL DE MANERA DINÁMICA
+
+ Si vamos al index veré que tengo el tema default-dark.css activado:
+<link href="./assets/css/colors/default-dark.css" id="theme" rel="styles">
+Sin embargo,si me voy a esa carpeta assets/css/colors veré 12 archivos .css,entre los que está default-dark.css,lógicamente.
+
+¿Como hacemos para cambiar ese archivo dinámicamente?Para hacer cambios de este tipo FH recomienda usar Vanilla JS ya que esta etiqueta incluso se encuentra fuera de la app de Angular o de React(las apps de Angular y React son el <app-root> y el <div id="root> que están dentro del body)
+
+No es nada complicado,ya que tenemos un atributo id(fijate que puedo poner un atributo id a un link en el header,algo que no habia visto hasta ahora.Simplemente buscaremos con el querySelector
+
+Creo un evento (click)="changeTheme('default') || changeTheme('green') etc, que me pase la cadena de texto con el nombre del tema.Habrá que concatenarle la extensión.
+
+changeTheme(theme:string){
+   const url=`./assets/css/colors/${theme}.css`;
+   const linkTheme = document.querySelector('#theme');
+   linkTheme.setAttribute('href',url);
+
+* Fijate lo fácil que es usando el método setAttribute('href', nuevaHref).También fijate que por mucho que este en Angular es como si estuviera en ese selector <app-root> y yo puedo hacer un document.querySelector de cualquier cosa del index.html desde ahi.
+No sólo podría cambiar un <link href> también podría cambiar un <script src> y caponiendole un id y cambiando su atributo src dinámicamente:
+<script src"..." id="script">
+document.querySelector("#script").setAttribute("src",variable).Increible todo lo que desconoces aún,asinto.
+
+Lógicamente perdemos el theme cuando refrescamos el navegador,pero podemos guardar la preferencia en el localStorage y cargarla.
+IMPORTANTE: en cuanto cargue Pages.component ya debe haber un tema,no podemos ponerlo en el OnInit accountSettingsComponent
+
+* El primer componente que muestre el dashboard debe cargar estos estilos(ya que el login y el register usan otro,pero si no ni siquiera podría esperar al DashboardComponent!)
+export class PagesComponent implements OnInit {
+  public year: number = new Date().getFullYear();
+  public linkTheme = document.querySelector('#theme'); 
+  constructor() { }
+
+   ngOnInit(): void {
+
+    const url =  localStorage.getItem('theme') || './assets/css/colors/purple-dark.css';
+    this.linkTheme!.setAttribute('href', url);
+  }
+}
+Realmente es muy sencillo cargar archivos css dinámicamente con setAttribute('href',nuevaUrl) y dando un id a la tag en el html <link id="theme">
+
+			VIDEO 64 AGREGANDO CLASES CSS SIN USAR NGCLASS
+
+Queremos agregar el check o visé en cada selector de tema,ya que nos falta hacerlo.Para hacer esto el provider del tema nos especifica que se hace agregando la clase 'working'.
+Hay varias formas de hacer esto,una sería con ngClass pero quedaría mucho código.
+
+Veamos como hacerlo de otra forma,dado que todas las <anchor> tienen la clase selector + theme + working o no hacemos un querySelectorAll.
+Ojo,que esto devolvia un NodeListOf<Element,podemos verlo como una lista de elementos HTML esa lista de nodos.
+
+checkCurrentTheme(){
+  const links = document.querySelectorAll('.selector')
+  links.forEach( elem => {
+    elem.classList.remove('working');
+    const btnTheme = elem.getAttribute('data-theme');
+    const btnThemeUrl = `./assets/css/colors/${btnTheme}.css`;
+    const currentTheme = this.linkTheme.getAttribute('href');
+   * si coinciden tengo que agregarle la clase working
+   if(btnThemeUrl === currentTheme) {
+    elem.classList.add('working') }
+
+* Lo primero es eliminar esa clase ya que la quiero poner yo programáticamente.
+Despues,dado que todas las anchor tienen ese atributo custom data-theme,puedo acceder simplemnte con getAttribute('data-theme').Fijate que ya lo trae,pero podría crearlo yo.
+NOTA: HTML5 CUSTOM DATA ATTRIBUTES => siempre debe tener minimo un caracter y precedido por 'data-',no puede tener mayúsculas(data-age,data-spacing,data-xxx).
+Su intención es poder almacenar datos pertenecientes a la página o aplicación,par los cuales no debería haber una mejor forma para hacerlo.(simplemente almacenan variables,muy intesante pues).
+
+Aun me faltará llamar a this.checkCurrentTheme en el changeTheme():
+
+changeTheme(theme: string) {
+    const url = `assets/css/colors/${theme}.css`;
+    this.linkTheme!.setAttribute('href', url);
+    localStorage.setItem('theme', url);
+    this.checkCurrentTheme();
+  }
+
+IMPORTANTE: fijate como FH decide llamar a los document.querySelector en el ngOnInit.El NgOnInit se va a disparar cuando ya está inicializado el componente,es decir,que ya tendré el HTML,asi que ningun querySelector va a fallar.
+
+* No dejarla como any,por algo usamos TS
+public links!:NodeListOf<Element>;
+
+ngOnInit():void {
+  this.links.querySelectorAll('.selector');
+} 
+Es una idea perfecta
+
+						VIDEO 65 SERVICIO SETTINGS
+
 
