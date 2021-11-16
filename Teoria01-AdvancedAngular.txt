@@ -308,4 +308,197 @@ Es una idea perfecta
 
 						VIDEO 65 SERVICIO SETTINGS
 
+¿Que pasaría si también quisiara ver el tema en otra parte de la aplicación?O que necesitara saber ese tema en otra parte,etc? Hay muchos motivos por los que podría querer saber el tema que estoy usando,asi que lo mejor sería centralizar la lógica en un servicio.
+Inclusive no tiene porque ser el tema,pueden ser un grupo de ajustes o las credenciales.Lo ideal es centralizar siempre la lógica con un servicio.
+
+Dado que no vamos a tener muchos servicios podemos usar una carpeta para todos,pero lo ideal sería ir creando servicios por cada módulo(auth.service.ts,shared.service.ts).
+
+NOTA:fijate que cuando la aplicación de Angular se crea ya existe la etiqueta <link id="theme" rel="stylesheet"> asi que no tengo que meter el document.querySelector('#theme') en el ngOnInit como si es el caso de los enlaces del componente,que hay que esperar que se construyan.
+También si los creara yo por código tengo que usar el ciclo de vida de Angular.
+
+¿Y porqué va esto en el constructor del Service?Por lo mismo,cuando arranque la app se llamará al servicio porque lo pide el PagesComponent(lo inyecta).Y en cuanto se cree esa instancia se llamará al constructor del servicio,ejecutando su lógica:
+
+export class SettingsService {
+
+  private linkTheme = document.querySelector('#theme'); 
+
+  constructor() {
+    const url =  localStorage.getItem('theme') || './assets/css/colors/purple-dark.css';
+    this.linkTheme!.setAttribute('href', url);
+   } }
+Realmente no hemos cambiado nada con esta lógica y ya centralizé todo.Amazing.
+
+Veamos que puedo pasar ahora al servicio desde el AccountSettingsComponent:
+
+* Fijate que estos enlaces,si llevo esta lógica al servicio,no van a existir en el DOM cuando se carge el servicio,no obstante vamos a saltar al DOM cada vez que se ejecute el método del servicio,sin embargo,como sólo son 10 enlaces apenas es costoso y lo puedo sacar al servicio perfectamente  
+
+checkCurrentTheme() {
+    const links: NodeListOf<Element>=document.querySelectorAll('.selector');
+    links.forEach(elem => {
+      elem.classList.remove('working');
+      const bg = elem.getAttribute('data-theme');
+      const bgUrl = `assets/css/colors/${bg}.css`;
+      const currentTheme = localStorage.getItem('theme');
+      if (bgUrl === currentTheme) {
+        elem.classList.add('working');
+      }
+    })
+  }
+S
+Todo esto se hace para tener el componente lo más limpio posible,fijate como queda,asin:
+
+export class AccountSettingsComponent implements OnInit {
+
+  changeTheme(theme: string) {
+    this.settingsService.changeTheme(theme);
+  }
+
+  constructor(private settingsService: SettingsService) { }
+  
+  ngOnInit(): void {
+    this.settingsService.checkCurrentTheme();    
+  }
+    
+Si quisiera incluso podría mandar los enlaces aqui,en el OnInit del AccountSettingsComponent(asi no salto al DOM):
+ ngOnInit(): void {
+    this.settingsService.checkCurrentTheme(enlaces);    
+  }
+Es decir que los declararía y buscaría en el componente y el servicio los recibe como argumento,pero como son apenas 10 <anchor> no nos importa el coste que tendrá esa operación.
+Fijate que esto es importante,asinto,cuando y quien salta al DOM.
+
+			VIDEO 6 ROUTERLINK -MOVER A UNA RUTA EN PARTICULAR
+
+Ya podría crear el enlace a dashboard/account-settings pues ya está terminado el componente.Para ello voy al sidebar.component.html.
+IMPORTANTE:fijate que puedo usar varias alternativas para pasar la url:
+1- <a routerLink="/dashboard/account-settings"> <- poner la ruta absoluta
+2- <a routerLink="account-settings"> <- ruta relativa,como ya estoy en /dashboard va a concatenarse /account-settings,haciendo /dashboard/account-settings.Claro que las relativas tienen peligro asin,pero no en un sidebar como este.
+
+3- <a [routerLink]="['dashboard/account-settings']">
+
+* Una de las diferencias radica en que haciéndolo así  [routerLink]="['/dashboard/account-settings']" vas a poder incluir algún tipo de condicional, por ejemplo: [routerLink]="url_settings ? '/dashboard/account-settings' : '/dashboard/home'"
+en cambio de esta forma  routerLink="/dashboard/account-settings"
+
+Fijate que en cuando necesite condiciones tengo que hacer data-binding en vez de pasarlo como un string.
+
+			VIDEO 67 SERVICIO PARA CONTROLAR EL MENU LATERAL-SIDEBAR
+
+Queremos construir el menú de manera dinámica,será un backend el que mande las opciones de menú.Lo vamos a hacer en un servicio porque en el logout purgaremos esas opciones y en el login las cargaremos,ole.
+
+EN el servicio creo una propiedad con el menu,claro que más tarde cargará esto de un backend:
+
+  menu: any[] = [
+    { 
+      titulo:'Dashboard!!',
+      icono:'mdi mdi-gauge', 
+      submenu:[
+        {titulo:'Main', url:'/'},
+        {titulo:'ProgressBar', url:'/progress'},
+        {titulo:'GraficaDona', url:'/grafica-dona'},
+      ]
+    }
+  ]
+
+En el sidebar la guardo en una propiedad para poder llevarla a la template e iterrar:
+
+ menuItems: any[] ;
+
+  constructor(private sidebarService: SidebarService) { 
+    this.menuItems = sidebarService.menu;
+  }
+
+
+Itero sobre la template,asignando los valores. Fijate que tremendamente interesante es esto,y lo fácil que es:
+
+    <li *ngFor="let item of menuItems">
+          <i class="mdi mdi-gauge"></i>
+          <span class="hide-menu">{{item.titulo}}
+          <span  class="label label-rouded label-themecolor pull-right">{{item.submenu.length}}</span></span>
+         
+          <li *ngFor="let subitem of item.submenu">
+             <a [routerLink]="subitem.url">{{subitem.titulo}}</a> 
+          </li>
+    </li>
+
+Fijate como puedo anidar bucles en la template si lo necesito.Si el dia de mañana quiero agregar otras rutas+subrutas solo tengo que ir al servicio y agregarlas.
+
+	VIDEO 68 USO DE SCRIPTS DE ARCHIVOS IMPORTADOS EN EL INDEX.HTML EN TYPESCRIPT
+
+NOTA: recuerda que routerLink="login" concatena login a la ruta actual,para ir al login en esta app hay que usar "/login"(absoluta)
+
+Recuerda que Angular inyecta el event.preventDefault() a los formularios en cuanto use el FormsModule o el ReactiveFormsModule(cualquiera de los dos,en cuanto los importe al módulo mis formularios dejarán de hacer refresh).
+	 
+Con esto en mente vamos simplemente a redireccionar al home al hacer login(ya lo crearemos):
+ constructor(private router: Router ) { }
+
+  ngOnInit(): void {
+  }
+
+  login(){ 
+    this.router.navigateByUrl('/');
+  }
+IMPORTANTE: fijate que esto destruye todo el componente,y el dashboard no carga bien,esto es porque hay un script al final del body que inicializa a los demás y lo hemos destruido(pues se destruyó el index.html)
+
+La etiqueta <script> es esta:
+<!--Custom JavaScript -->
+  <script src="./assets/js/custom.min.js"></script>
+
+De alguna manera tengo que volver a cargar ese script cuando haga la redirección el router de Angular en el login.
+Dado que es JQuery voy a ese archivo y meto todo en una función que voy a disparar yo:
+const customInitFunctions = () => {
+    $(function() {
+        "use strict";
+        $(function() {
+          ...
+
+customInitFunctions().
+
+Bien,está claro que hay que llamar a esta función que está en un <script>.O Bien en el app.component.ts o en el pages.component.ts también nos vale.
+
+declare function customInitFunctions():any;
+
+@Component({
+  selector: 'app-pages',
+  templateUrl: './pages.component.html',
+})
+export class PagesComponent implements OnInit {
+   ngOnInit(): void {
+    customInitFunctions();
+  }
+La función esta declarada de manera global,pero TS se va a quejar,lo que hay que hacer es usar declare function functionName():any; y con esto puedo llamar a cualquier función declarada global(en el primer scope de cualquier archivo,que no esté anidada:
+
+En cualquier archivo del proyecto:
+const xxx = () => {} <- está lo más externa posible al archivo,esto es una función global,el resto de la app tiene visión sobre ella.
+
+En resumen,puedo acceder desde Angular a código de afuera de él(recuerda que Angular es solo la tag <app-root> en un index.html.Pues puedo acceder a código de ese index.html,cualquier <script>,etc...
+Incluso podriamos haber usado argumentos.
+
+				VIDEO 69-70 SUBIR CAMBIOS A GITHUB
+
+Subo los cambios a Github,creo una tag y le hago el release.Recuerda especificar qué cambios hice.
+
+						SECCION 08 OBSERVABLES Y PROMESAS
+
+Si bien son bastante similares,las promesas son muy difíciles de cancelar,cuando  se lanza es casi imposible cancelarla,sin embargo un Observable me permite más control sobre lo que estoy haciendo.
+También pueden estar emitiendo un flujo continuo de información,la Promesa sólo emite información una vez(importante)
+
+Esta sección tiene por objetivo principal, trabajar con observables y promesas:
+
+1- Tendremos una introducción ilustrativa para explicar estos dos temas
+2- Trabajaremos con promesas y funciones que retornan promesas
+3- Aprenderemos a crear un observable manualmente
+4- Trabajaremos con operadores de los observables como:
+5- Retry
+6- Map
+7- Filter
+8- Next
+9- Funciones que retornan observables
+
+Usaremos el conocimiento aprendido para crear un componente de seguimiento de la página actual
+Usaremos observables para leer parámetros de configuración de las rutas que son diferentes a los parámetros de las rutas por url
+Cambiaremos los metatags dependiendo de la página donde nos encontremos
+Cambiar el titulo de la página actual
+Al finalizar, realizamos el respectivo backup en GitHub, junto a su release TAG.
+
+			VIDEO 73 INTRODUCCIÓN A PROMESAS Y OBSERVABLES
+
 
