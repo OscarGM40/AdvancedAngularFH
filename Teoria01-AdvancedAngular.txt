@@ -501,4 +501,190 @@ Al finalizar, realizamos el respectivo backup en GitHub, junto a su release TAG.
 
 			VIDEO 73 INTRODUCCIÓN A PROMESAS Y OBSERVABLES
 
+SIMILITUDES:
 
+Ambas son para trabajar procesos asíncronos,pero no sólo sirven para peticiones HTTP,se pueden crear Promesas u Observables para estar atentos a ciertos cambios en su código y ser notificados cuando ese cambio suceda.
+
+FEATURES DE LAS PROMESAS:
+1- Trabajan con un único flujo de datos(solo pueden trabajar con un asunto a la vez por promesa)
+2- Retornan una única data asíncrona como respuesta
+3- No son simples de cancelar(casi imposible)
+4- Son simples de implementar,asi que si quiero implementar una tarea sencilla es una buena opción,sin embargo,los observables son mucho más robustos y son una mejor opción.
+
+FEATURES DE LOS OBSERVABLES
+1- Trabajan con un flujo continuo de datos(pueden estar escuchando una gran cantidad de respuestas,no sólo una)
+2- Al fallar puedo ejecutar comandos y reintentar continuar con el Observable.
+3- Se pueden encadenar operadores adicionales como el map,forEach,reduce,filter,..y muchos más
+4- Existen otros operadores muy potentes como el retry() o el replay()
+5- Pueden ser creados desde otras fuentes,como al dispararse un evento.
+6- Son funciones a las cuales podemos subscribirnos en múltiples lugares.
+
+Un observables podria subscribirse,por ejemplo,cada vez que alguién publique un tweet,quedará escuchando por siempre(flujo continuo o infinito).Un ejemplo finito sería escuchar por 5 tweets,despues del cual con la función complete podríamos marar el Observer y asi terminar el Observable.
+
+Acuerdate del ejemplo de Superman,que le dice a Batman que le notifique mediante una Promesa cuando vea a Captain América(y como sólo lo va a hacer una vez y como si incluso a Superman ya no le interesa no se puede decir a Batman que lo deje,Batman informará aunque ya no sea necesario).
+Siguiendo la analogía,ahora Superman pide a Batman(el Observer) que le notifique cuando aparezca Captain América.Aparece una vez y Batman le avisa(Observable),aparece otra y de nuevo le avisa(flujo continuo),aparece Daredevil y con un filter() hacemos que no le avise,y ahora Superman se va con unsubscribe() y Batman deja de Observar y no notifica más.
+Está bien claro quien es un prehistoric y quien no, asin, -_-
+
+IMPORTANTE: las promesas son propias de Javascript,en cualquier entorno JS las puedo usar,los Observables son propios de RxJs(el cuál viene en Angular por defecto,pero puedo usar también en un entorno Js).
+
+					VIDEO 74 REFORZAMIENTO SOBRE PROMESAS
+
+IMPORTANTE: una Promesa sólo es asíncrona si su código es asíncrono:
+
+const promesa = new Promise( () => console.log('promesa'))
+console.log('afuera') 
+
+Este código es sincrono,veré 'promesa' antes que afuera.Por cierto,una Promise lleva una función callback como argumento.
+Es una convención usar resolve y reject,pero no es obligatorio:
+const promesa = new Promise( (resolve) => resolve('promesa') );
+En cuanto use resolve o reject ya tengo que llamar a la promesa con .then o async/await:
+promesa.then( (data) => console.log(data) ) <- dará 'promesa'.
+
+De igual manera es una convención usar 'reject' para especificar código en el error de la resolución de la promesa.Como puedo apreciar,ambos argumentos son opcionales:
+const promesa = new Promise( (resolve,reject) => {
+  if(false){ resolve('resuelto')else{ reject('error gordo') <- como es false irá por el else y no se resolverá exitosamente(pero si se resuelve,ojo)
+
+Para manejar ese error hay que usar .catch o el try/catch.
+promesa.then(console.log).catch(error => console.log('Error en mi promesa' + error) <- veré 'Error en mi promesa error gordo'.
+
+				VIDEO 75 FUNCIONES QUE RETORNAN PROMESAS
+
+Realmente,no se suelen crear las promesas así,con la clase Promise.Normalmente se usa una función.Hagamos una petición a https://reqres.in que es una API abierta(y a /api/users/ para el getUsers).Para ello creamos un método en la clase:
+
+getUsuarios() {
+  const promesa = new Promise( resolve => {
+
+  fetch('https://reqres.in/api/users')
+    .then( resp => resp.json())
+    .then( body => resolve(body.data) )
+  })
+  return promesa;
+NOTA: fijate que const promesa + return promesa puedo hacer un return anónimo:
+
+getUsuarios() {
+  return new Promise( resolve => {
+
+  fetch('https://reqres.in/api/users')
+    .then( resp => resp.json())
+    .then( body => resolve(body.data) )
+  })
+} <- es bastante común hacer un return new Promise,fijate que yo llamo al resolve donde quiera,retornando sólo lo de ese resolve.FH es Dios.
+
+ngOnInit(): void {
+  this.getUsuarios().then( usuarios => console.log(usuarios))
+
+			VIDEO 76 COMPONENTE RXJS Y ARREGLO EN EL MENÚ
+
+Fijate que el jQuery que hace la funcionalidad de una ActiveClass falla.Vamos a usar las propiedades del Router de Angular routerLinkActive y routerLinkActiveOptions(está última para especificar que haga full match la ruta):
+
+* En el sidebar.component.html
+<li *ngFor="let item of submenu.item>
+<a routerLink="item.url" routerLinkActive="active" [routerLinkActiveOptions]="{exact:true}"> <- entiendo yo que la clase active ya está en el css de la template y fijate como le paso un objeto entre las dobles comillas y ello me obliga a usar corchetes,creo.
+
+
+					VIDEO 77 CREAR OBSERVABLE MANUALMENTE
+
+Comprender Rxjs en Angular es imprescindible.Muchas cosas en Angular trabajan con Observables,asi que entenderlos será fundamental.Veamos como crear un Observable manualmente:
+
+* De igual manera que una promesa es una instancia de la clase Promise con una callback como argumento un observable es una isntancia de la clase Observable con una callback como argumento igualmente.
+
+const obs$ = new Observable(observer => {
+
+  setInterval( () => { console.log('tick'},1000)
+
+
+});
+
+
+NOTA: en vez de resolve se usa la keyword 'observer' que es de tipo Subscriber.Es este 'observer' el que va a estar emitiendo los valores,quién dirá cuando se termina,cuando hay error.Es el Subscriber el que va a decir como está el Observable(su estado) y que información está fluyendo a través de él.
+Fijate en la convención de llamar a la instancia obs$ para especificar que es un custom Observable
+
+NOTA:puedo ver que esto no hace nada tal como está,pues si el Observable detecta que no hay nadie suscrito no hará nada.No se va a disparar hasta que se subscribana a él con el método subscribe(next,error,complete):
+
+obs$.subscribe(valor => console.log(valor) ) < fijate que no imprimirá nada,porque el observer realmente no está recogiendo ningun valor.Un console.log no es un valor de retorno alguno.Para poder retornar algo el observer tendrá que acumular valores en él(con el método next(valor a emitir):
+
+const obs$ = new Observable( observer => {
+  let contador = -1;
+  setInterval( () => {
+    i++;
+    observer.next(i);
+  },1000)
+})
+
+Fijate como next(nextValue) recibe por argumento lo que quiero primero acumular y despues emitir en la subscripción.
+IMPORTANTÍSIMO: fijate que aunque me cambie a otro componente la subscripción no se cancela y seguirá emitiendo los valores que acumule el Observer
+No sólo esto es importante,sino que si voy a otro componente y vuelvo a esta página se creara otra instancia del componente y otra subscripción,dando lugar a posibles problemas de rendimiento y memoria.
+Se debe cancelar una subscripción ya sea al destruirse el componente o cuando no sea necesaria:
+
+const obs$ = new Observable( observer => {
+  let i = -1;
+  const intervalo = setInterval( () => {
+    i++;
+    observer.next(i);
+	if(i===4){
+      clearInterval(intervalo);
+      observer.complete();
+  },1000);
+});
+
+*Fijate que también hemos usado clearInterval(function) que es de JS.El método complete:void termina el trabajo del Observer.Lógicamente,si el Observer deja de emitir ,la subscripción se cancela automáticamente.
+
+IMPORTANTE: el método subscribe(next,error,complete) tiene tres argumentos,el primero es que hacer en cuanto reciba un valor,el segundo es para el error,y el tercero es que hacer cuando la subscripción termine,como por ejemplo,con ese observer.complete().Muy interesante:
+
+obs$.subscribe(
+  valor => console.log('Sub:',valor),
+  err => console.warn('Error:',err),
+  () => console.log('Obs$ terminó su trabajo') );
+
+NOTA: puedo hacer que el observer mande un error con el método error.La lógica para tratarlo irá en el segundo argumento del subscribe,el error.
+Si un observer manda un error no terminó de manera satisfactoria y no llegará a la zona del complete
+if(i===2){
+  observer.error('Observer termina su trabajo con un error') <- ojo que observer.error() es terminal.
+
+				VIDEO 78 MÉTODO RETRY DE UN OBSERVABLE
+
+El operador retry es un operador muy útil.Lo usaré cuando sepa que el Observable falló pero aún asi quiero volver a intentar conectar la comunicación con el flujo de información.
+NOTA: cualquier Observable tiene el método pipe.Este método es como si fuera conectar una extensión a una manguera,simplemente permite crear lógica antes del subscribe.No es una simple extensión,permite modificar,reintentar,....
+Siempre va antes de la resolución en el subscribe??
+import { retry } from 'rxjs/operators';
+
+obs$.pipe(
+  retry(5)
+  ).subscribe(...);
+
+Normalmente,lo mejor es que maneje el error,son casos muy especiales en los que necesitaré reintentar el Subscribe.
+NOTA: también está el operador retryWhen que permite especificar cuando reintentar,algo que puede ser más útil aún.
+
+			VIDEO 79 FUNCIONES QUE RETORNAN OBSERVABLES
+
+De nuevo,no se acostumbra a crear un observable y subscribirse en la sentencia siguiente,como hemos hecho cual prehistorics.No tiene sentido,ya que puedo subscribirme ahi mismo:
+const obs$ = new Observable( observer => ...).subscribe();
+
+En vez de crearlo en el constructor,se suele crear un método que retorna un Observable:
+
+retornaObservable():Observable<number>{
+  const obs$ = new Observable( observer => ...)
+  return obs$;
+
+return new Observable( observer => {
+
+  let i=-1;
+  const intervalo = setInterval( () => {
+    i++;
+    if(i===4){ observer.complete()}
+    if(i===2){ 
+      clearInterval(intervalo);
+      observer.error('error en el dos') }
+
+  },1000)
+});
+
+* Fijate como hago el clearInterval desde dentro del setInterval,asinto.
+* De igual manera que con el return new Promise no tengo porqué declarar la instancia puedo devolver una clase anónima(return new Observable.Ahora lo importante es el método ya:
+this.retornaObservable().pipe( retry()).subscribe(...);
+
+Lo normal es crear estos métodos en un servicio y subscribirme en otro punto de la aplicación inyectando dicho servicio.
+
+	VIDEO 80 OPERADOR MAP DE LOS OBSERVABLES(COMUNICACION ENTRE COMPONENTES)
+
+Este operador es,quizá,el más común de todos,el cual sirve para transformar la salida de un observable.
