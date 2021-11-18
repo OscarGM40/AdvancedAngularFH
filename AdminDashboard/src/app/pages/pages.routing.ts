@@ -15,12 +15,36 @@ import { RxjsComponent } from './rxjs/rxjs.component';
 const routes: Routes = [{
    path: 'dashboard', component: PagesComponent,
    children: [
-      { path: '', component: DashboardComponent },
-      { path: 'progress', component: ProgressComponent },
-      { path: 'grafica-dona', component: Grafica1Component },
-      { path: 'account-settings', component: AccountSettingsComponent },
-      { path: 'promesas', component: PromesasComponent },
-      { path: 'rxjs', component: RxjsComponent},
+      {
+         path: '', component: DashboardComponent, data: {
+            title: 'Dashboard',
+         }
+      },
+      {
+         path: 'progress', component: ProgressComponent, data: {
+            title: 'Gráfica ProgressBar',
+         }
+      },
+      {
+         path: 'grafica-dona', component: Grafica1Component, data: {
+            title: 'Gráfica Dona | Donought',
+         }
+      },
+      {
+         path: 'account-settings', component: AccountSettingsComponent, data: {
+            title: 'Ajustes de Tema',
+         }
+      },
+      {
+         path: 'promesas', component: PromesasComponent, data: {
+            title: 'Promesas Custom',
+         }
+      },
+      {
+         path: 'rxjs', component: RxjsComponent, data: {
+            title: 'Operadores RxJs Y Observables Custom',
+         },
+      }
    ]
 }];
 

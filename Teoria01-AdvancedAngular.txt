@@ -687,4 +687,123 @@ Lo normal es crear estos métodos en un servicio y subscribirme en otro punto de
 
 	VIDEO 80 OPERADOR MAP DE LOS OBSERVABLES(COMUNICACION ENTRE COMPONENTES)
 
-Este operador es,quizá,el más común de todos,el cual sirve para transformar la salida de un observable.
+Este operador es,quizá,el más común de todos,el cual sirve para transformar la salida de un observable.Lo vamos a mezclar con otro operador y una función para mezclar observables.
+
+NOTA:rxjs posee funcionalidad para simular una numeración autoincremental de integers(1,2,3,4...). Se hace con el operador interval(el cual devuelve un Observable):
+
+import { interval } from 'rxjs/operators';
+
+retornaInterval():Observable<number>{
+  const interval$ = interval(1000);)
+  return interval$;
+
+Cuando me subscriba a este método(pues es un Observable al que hay que subscribirse) simplemente incrementará de uno en uno cada 1000ms(es lo único que hace incrementar de 1 en 1 empezando desde el 0,ojo).
+Pero recuerda que es un Observable el operador,asi que puedo encadenarle lo que quiera con pipe():
+Vamos a usar el operador 'take' que especifica cuantas emisiones del Observable necesita y automáticamente termina la Subscription al Observable tras ese número.
+
+retornaIntervalHastaX():Observable<number> {
+  const interval$ = interval(1000).pipe( take(4) );
+
+Dado que 'interval' empieza desde el 0 emitirá 0,1,2,3,pero, y si quisiera que empiece desde el 1?Usaremos el operador map.
+EL MAP SIRVE PARA TRANSFORMAR LA INFORMACIÓN QUE RECIBE EL OBSERVABLE Y MUTARLA DE LA MANERA QUE YO QUIERA.
+retornaXXX(){
+  const interval$ = interval(1000)
+    .pipe( 
+      take(4),
+      map( x => x+1)
+);
+
+						VIDEO 81 OPERADOR FILTER
+
+Este otro operador es sumamente usado,junto con el map.Permite filtrar la información que fluye dentro del Observable hacia cualquier Subscription.
+Vamos a usar la división sintética o ḿódulo que devuelve el residuo de una división( 3 % 2 => 1) <- que prehistorics.
+
+NOTA el filter puede simplemente devolver un true(ya que lo que tiene que hacer es devolver un true,un false o cualquier expresión que terminte evaluandose a true,o false( filter( v => true) <- todos pasan).(es como un return true)
+De igual manera un filter( elem => false) no dejará pasar ninguno.
+
+Fijate que el orden de los operadores es importante,si pongo un take(10) y despues hago un filtrado no es lo mismo que si primero filtro y despues emito(10).El primer caso emitira 10 valores y puede que filtre 5,todos,ninguno,... pero el segundo caso tendré 10 valores al 100% probabilidad.
+
+return interval(1000)
+  .pipe(
+    map(v => 'valor:' + ++v),
+    filter(v => (+v.split(':')[1] % 2 ===0) ? true : false ),
+    take(10) );
+Fijate que voy a emitir del 2 al 20(10 valore).El orden influye,mejor hubiera filtrado antes del map,etc...
+
+					VIDEO 83 LLAMAR AL UNSUBSCRIBE
+
+Es muy importante gestionar las subscripciones a un Obervable.Cuando vaya a otro componente la subscripcion queda activada,es muy importante cancelarla si no necesito el Observable más que en ese componentew
+Recuerda que usar .subscribe me devuelve una instancia de la clase Subscription.Para cancelar una Subscription se usa su método .unsubscribe();
+
+Normalmente se cancela una Subscription cuando uno de sus valores que emite cumpla determinada condición.Para almacenar esta subscripcion y despues cancelarla se usan propiedades de clase que almacenen esta clase Subscription.
+
+export class XXXComponent implements onDestroy
+public intervalSubs: Subscription;
+
+this.intervalSubs = this.retornaIntervalo().subscribe(console.log)
+
+ngOnDestroy():void {
+  this.intervalSubs.unsubscribe(); 
+
+Normalmente hay que limpiar Observables que emitan muchos valores,si no no es necesario.Hay que tener cuidado con Observables que emiten valore muy frecuentemente
+
+			VIDEO 84 BREADCRUMBS USANDO OBSERVABLES Y PARÁMETROS DE RUTAS
+
+Si voy al file pages.routing.ts yo puedo especificar parámetros de ruta.Esto es útil para saber en que ruta me encuentro.Imaginemos que lo queremos poner donde dice 'Blank Page'.
+Para pasar información se usa un tercer argumento llamado 'data' el cual es un objeto de pares de valores(puedo mandar los que quiera):
+
+const routes: Routes = [
+  {
+    path:'dashboard',
+    component: PagesComponent,
+    children: [
+      { path:'',component: DashboardComponent, data: { title:'dashboard}}
+
+ Como voy a trabajar con el Router de Angular es obvio que tengo que inyectarlo donde lo vaya a usar,en este caso en el breadcrumbs.component.ts.
+Este router tiene una propiedad muy interesante que es 'events' la cual es un Observable<Event> que emite eventos,al cual me puedo subscribir.
+
+  constructor (private router: Router) { 
+    this.router.events.subscribe( event => console.log(event) );
+
+Veré algunas dos veces,ya que tenemos un router dentro de otro router:
+ActivationEnd,ChildActivationEnd(ambas * 2) y Scroll y NavigationEnd
+La información que me interesa la tengo en ActivationEnd.data.Sin embargo,hay dos uno de las rutas padre y otro de las hijas,es ése el que me interesa.
+Para saber cual es cual,ambos tienen la propiedad 'firstChild',pero el de la subruta lo tiene en null,asi que filtremos usando los operadores que ya hemos visto pues estamos en una Subscription.
+
+NOTA:fijate que el modo estricto que parece que ya viene activado por defecto me dará error.Puedo usar varias soluciones
+
+this.router.events.pipe(
+  filter<any>( event => event instanceof ActivationEnd),
+  filter( (event:ActivationEnd) => event.snapshot.firstChild === null),
+  map( (event:ActivationEnd) => event.snapshot.data)
+  .subscribe( ({title}) => { <- ojo con ( ({}) ) 
+    document.title = `AdminPro - ${title}`;
+    this.title = title;
+);
+  
+También puedo quitar el filter<any> y usar 
+  filter( (event):event is ActivationEnd => event instanceof ActivationEnd)
+   nullsubscribe(
+}
+Fijate como puedo acceder a document.title,pues si estoy en un index.html billy.
+
+			VIDEO 85 OPTIMIZACIONES DEL BREADCRUMBS
+
+Tal como tenemos la app si yo hago el logout no voy a cancelar la subscripción al this.router.events.subscribe( pues nunca la he cancelado,asinto).
+Si un uusario hiciera logout y vuelve a entrar tendría dos Subscriptions,es por esto que tenemos que hacer una optimización en nuestro código,de echo ya hemos visto como:
+
+public titleSub$: Subscription;
+
+  constructor(private router: Router) {
+    this.titleSub$ = this.getDataThroughRoute()
+                     .subscribe(({ title }) => {
+                       document.title = `AdminPro - ${title}`;
+                       this.title = title;
+                    }); 
+  }
+; 
+
+Fijate que tuve que cortar la subscripcion,pues no puedo devolverla aún si uso una instancia de Subscription eso es una llamada a .subscribe,no a un método que ya llamó a .subscribe.
+
+NOTA: tambien podía haber inyecado ActivatedRoute y acceder por otro lado a esa data,aunque hay que subscribirse igual y tiene downsides pues accedo a una snapshot.
+Por último subimos todo a Github y hacemos el tag-release.

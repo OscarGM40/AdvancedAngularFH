@@ -1,0 +1,15 @@
+					SECCION 09 EMPEZANDO EL BACKEND
+
+Esta sección tiene como objetivo preparar todo lo necesario para comenzar a crear nuestro backend server:
+
+1- Configuración de Mongo
+2- Robo 3T
+3- Conexión entre Mongo y Node
+4- Tip sobre colores de consola
+5- Aprender un poco sobre los errores de respuestas HTTP
+6- Configuración inicial de Express
+7- Establecer las bases de nuestros RESTful services
+
+Al finalizar, crearemos un nuevo repositorio en GitHub para almacenar nuestro backend server y así tenerlo listo en caso de que necesitemos implementar un nuevo backend server rápidamente
+
+
