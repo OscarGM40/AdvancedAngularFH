@@ -12,4 +12,36 @@ Esta sección tiene como objetivo preparar todo lo necesario para comenzar a cre
 
 Al finalizar, crearemos un nuevo repositorio en GitHub para almacenar nuestro backend server y así tenerlo listo en caso de que necesitemos implementar un nuevo backend server rápidamente
 
+						VIDEO 90 INICIO BACKEND
+
+Fijate que   "keywords": [], es para dar palabras clave si voy a usar el registro de repos de npm.
+Recuerda que jamás debo modificar el package.lock.json manualmente
+NOTA: fijate que lo mejor es instalar nodemon de manera global en el sistema y así no tengo que instalarlo en el proyecto
+
+Fijate que los códigos 200 son respuestas exitosas,los 300 redirecciones(movimiento de recursos),los 400 son que nosotros hicimos mal la petición.Los 500 son errores directamente relacionados con el servidor.
+
+Fijate como lanzar un new Error me va a ser suficiente,asinto.No hace falta matar el proceso(diría que es mala idea):
+export const dbConnection = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      useCreateIndex: true,
+      useFindAndModify: false,
+    });
+    console.log("MongoDB Connected to " + mongoose.connection.name);
+  } catch (error) {
+    console.log(error.message);
+    throw new Error('Error a la hora de iniciar la DB.Ver logs') <- creo que simplemente tirar el error es suficiente
+  }
+};
+
+NOTA: desde mongoose 6+ las opciones ya vienen implicitas en el método connect() ya no son necesarias,estaban de forma provisional.
+MOngoose es un ODM(mapeador de Documentos), no es lo mismo que Sequelize que es un ORM(Mapeador de Relaciones)
+
+NOTA:todo lo que grabe en un .env son STRINGS(PORT=3005,ese 3005 es un string).
+Además,nodemon sólo está pendiente de cambios en archivos de Javascript y ese .env no es un archivo de Javascript asi que cuando haga cambios en los archivos de variables de entorno tengo que parar y levantar de nuevo la app.
+
+NOTA: los middlewares se ejecutan en cada petición,asi pues app.use(cors()) o  app.use(express.json()) se ejecutan de nuevo en cada petición ,porque son un middleware.
+
 
