@@ -11,10 +11,8 @@ dbConnection();
 app.use(express.json())
 app.use(cors());
 
-app.get('/', (req, res) => {
-    res.json({msg:'Hello World!',ok:true});
-});
-
+// peticiones de las rutas al Router de Express
+app.use('/api/usuarios',require('./routes/usuarios.routes'))
 
 
 

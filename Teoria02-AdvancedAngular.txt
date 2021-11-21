@@ -44,4 +44,100 @@ Además,nodemon sólo está pendiente de cambios en archivos de Javascript y ese
 
 NOTA: los middlewares se ejecutan en cada petición,asi pues app.use(cors()) o  app.use(express.json()) se ejecutan de nuevo en cada petición ,porque son un middleware.
 
+Fijate que si Git está dando seguimiento al folder node_modules lo veré en verde,o con algun carácter sobre él.Es la prueba de que algo hice mal.
+
+				SECCION 10 BACKEND DE USUARIOS
+
+El control de usuarios es algo torácico y fundamental en una aplicación.
+Esta sección tiene por objetivo trabajar fuertemente con Express, Mongo y Node:
+
+1- Explicación general y alcances del Backend
+2- Crear colección de Usuarios
+3- Crear modelos en Node
+4- POST
+5- Validaciones automáticas mediante Mongoose
+6- Encriptar contraseñas
+7- PUT
+8- Delete
+9- Get
+10- Login de Usuario
+11- Generación de un JWT
+12- Middlewares
+13- Optimizar Middlewares
+
+Al finalizar, actualizaremos nuestro repositorio en GitHub para mantener un respaldo de nuestro código local y remotamente
+
+			VIDEO 104 PANORAMA GENERAL DEL BACKEND
+
+Vamos a crear una aplicación de hospitales.Tendrá tres tablas,usuarios,médicos y hospitales.
+Los usuarios están relacionados con los médicos(más bien pacientes).
+Los médicos se relacionan con los hospitales y los hospitales también se relacionan con los médicos.
+
+Campos del Modelo Usuario/Paciente:
+nombre(required),email(required,unique),password(required,encryptedOneWayHash),img(optional),role(required,default,enum),createdByGoogle(boolean,optional).
+
+Campos del Schema Médicos:
+nombre,img,usuario(ref),hospital(ref)
+
+Campos del Modelo Hospital:
+nombre,img,usuario
+
+Vamos a añadir diversas features como un buscador(fijate que necesito esto en mi social net),también vamos a añadir un remember me para el email y comprobar el token que envia Google si el usuario se logea por Google.
+También habrá paginación,carga de imágenes y archivos,bloqueo de imágenes(mediante filesystem,mediante url y otra que necesite estar autenticado).
+Generaremos el token,lo verificaremos y validaremos el token de Google(mandarla al backend y si coincide entonces si creo el usuario).
+
+					VIDEO 105 CREANDO EL MODELO DE USUARIO
+
+Creo el modelo como cualquier otro:
+const mongoose = require('mongoose');
+
+
+const UsuarioSchema = new mongoose.Schema({
+   nombre: { type: String, required: true },
+   email: { type: String, required: true, unique: true },
+   password: { type: String, required: true },
+   img: { type: String, },
+   role: { type: String, required: true, default: 'USER_ROLE' },
+   google: { type: Boolean, default: false },
+},{
+   timestamps: true,
+   versionKey: false
+});
+
+module.exports = mongoose.model('Usuario', UsuarioSchema);
+Fijate que no tiene relaciones hacia él.
+
+			VIDEO 106 EMPEZANDO CON LAS RUTAS Y LOS CONTROLADORES
+
+Empiezo creando el getUsuarios.Vamos a separar las rutas de los controladores.Fijate como FH recomienda poner el cada file de rutas la ruta al principio:
+
+/* Ruta: '/api/usuarios */
+const router = require('express').Router();
+const { getUsuarios } = require('../controllers/usuarios.controller');
+
+/*  */
+app.get('/',getUsuarios);
+
+module.exports = router;
+
+Asi sabré en cuanto mire el archivo que es /api/usuarios y no tengo que ir al index.Parece buena idea.
+
+				VIDEO 107 POST- CREAR USUARIO
+
+Simplemente creamos el controlador.
+
+		VIDEO 108 TERMINAR EL GET DE LOS USUARIOS
+
+Muy dificil asinto.
+
+			VIDEO 109 VALIDAR QUE EL EMAIL SEA UNIQUE
+
+zzzzzz
+
+				VIDEO 110 VALIDAR CAMPOS OBLIGATORIOS
+
+
+
+
+
 

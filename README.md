@@ -1,7 +1,7 @@
-## AdminPro - Admin Template
+## AdminPro - MEAN HospitalDB
+### Frontend desarrollado en  Angular 11 con template AdminPro y Backend en Node
 
-[]: # Language: markdown
-[]: # Path: README.md
+###### Desarrollar una pequeña descripción más adelante aqui
 
 Reconstruir backend
 ```
