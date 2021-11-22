@@ -136,8 +136,162 @@ zzzzzz
 
 				VIDEO 110 VALIDAR CAMPOS OBLIGATORIOS
 
+Ya existen multitud de librerias con funcionalidad para manejar validaciones.Sin embargo usaremos express-validator cual asintos. 
+Recuerda que como segundo argumento en las rutas puedo usar o un único middleware o un array con todos ellos(pero siempre será un único argumento:
+
+router.get('/',middleware,controlador) ó bien
+router.get('/',[middlewareA,middlewareB,middlewareC],controlador)
+
+Recuerda que desde cierta versión ya no se usa el middleware body sino el check:
+
+const { check } = require('express-validator');
+
+router.post('/',[
+   check('nombre','El nombre es obligatorio').not().isEmpty(),
+   check('email','El email es obligatorio').isEmail(),
+   check('password','El password es obligatorio').not().isEmpty()
+   ],crearUsuario);
+
+Y recuerda que esto realmente no hace nada,hay que ir al controlador y mapear los errores que pueda tener cada request tras pasar por el check.
+
+  const errores = validationResult(req);
+  
+  if (!errores.isEmpty()) {
+    return res.status(400).json({
+      ok: false,
+      errores: errores.mapped(),
+    });
+  }
+
+IMPORTANTE: recuerda que es un error copiar y pegar este código por cada controlador.Es tremendamente importante crear una función helper que abstraiga la lógica.
+
+				VIDEO 111 MIDDLEWARE PERSONALIZADO
+
+Realmente abstraer la lógica de la devolución de los errore es muy fácil:
+
+const { validationResult } =require("express-validator");
+
+exports.validarCampos = (req= request,res= response,next) => {
+   
+   const errores = validationResult(req);
+
+   if (!errores.isEmpty()) {
+      return res.status(400).json({
+         ok: false,
+         errores: errores.mapped(),
+      });
+   }  
+   next();
+}
+
+Luego hay que usarlo,pero ojo,debe ir el último por motivos obvios.
+
+			VIDEO 112 ENCRIPTAR CONTRASEÑA USANDO ONEWAYHASH
+
+Para encriptar vamos a usar bcryptjs asi que lo instalamos.	Lo vamos a hacer de forma síncrona esta vez:
+const bcrypt = require("bcryptjs");
+
+const salt = bcrypt.genSaltSync();
+usuario.password = bcrypt.hashSync(password,salt) <- ya tenia password desestructurado.
+
+Aún nos faltaria devolver el token,entre otras cosas.
+
+				VIDEO 113 PUT - Actualizar un usuario
 
 
+m
+rts.actualizarUsuario = async (req = request, res = response) => {
+  // TODO validar token
+  const uid = req.params.id;
+  const { nombre, email, password, role } = req.body;
 
+  try {
+    const usuarioDB = await Usuario.findById(uid);
 
+    if (!usuarioDB) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no encontrado",
+      });
+    }
 
+    
+    usuarioDB.nombre = nombre;
+    if (usuarioDB.email !== email) {
+      const existeEmail = await Usuario.findOne({ email });
+      
+      if(!existeEmail) {
+        usuarioDB.email = email;
+      }else{
+        return res.status(400).json({
+          ok: false,
+          msg: "El correo ya existe",
+        });
+      }
+
+    }
+    usuarioDB.role = role;
+
+    if (password) {
+      const salt = bcrypt.genSaltSync();
+      usuarioDB.password = bcrypt.hashSync(password, salt);
+    }
+
+    await usuarioDB.save();
+
+    res.json({
+      ok: true,
+      usuario: usuarioDB,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      ok: false,
+      msg: "Error inesperado",
+    });
+  }
+};
+
+				VIDEO  115 DELETE BORRAR UN USUARIO
+
+Hoy en día no se recomienda realmente borrar un usuario de una DB.Es mejor usar un simple boleano isActive por si un día vuelve.
+NOTA: no hay ningun problema en que tenga una petición DELETE y realmente no borre nada.Se recomienda desactivar los usuarios y no borrarlos.
+
+exports.borrarUsuario = async (req = request, res = response) => {
+  const uid = req.params.id;
+
+  try {
+    const usuarioDB = await Usuario.findById(uid);
+
+    if (!usuarioDB) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no encontrado",
+      });
+    }
+
+    usuarioDB.isActive = false;
+    await usuarioDB.save();
+
+VIDEO ..
+
+Hoy en día no se recomienda realmente borrar un usuario de una DB.Es mejor usar un simple boleano isActive por si un día vuelve.
+NOTA: no hay ningun problema en que tenga una petición DELETE y realmente no borre nada.Se recomienda desactivar los usuarios y no borrarlos.
+
+exports.borrarUsuario = async (req = request, res = response) => {
+  const uid = req.params.id;
+
+  try {
+    const usuarioDB = await Usuario.findById(uid);
+
+    if (!usuarioDB) {
+      return res.status(404).json({
+        ok: false,
+        msg: "Usuario no encontrado",
+      });
+    }
+
+    usuarioDB.isActive = false;
+    await usuarioDB.save();
+
+VIDEO ....

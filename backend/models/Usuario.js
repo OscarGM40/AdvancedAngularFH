@@ -8,6 +8,7 @@ const UsuarioSchema = new mongoose.Schema({
    password: { type: String, required: true },
    img: { type: String, },
    role: { type: String, required: true, default: 'USER_ROLE' },
+   isActive: { type: Boolean, default: true },
    google: { type: Boolean, default: false },
 },{
    timestamps: true,
