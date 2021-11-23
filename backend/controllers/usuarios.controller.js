@@ -1,7 +1,7 @@
 const { response, request } = require("express");
-const { validationResult } = require("express-validator");
 const Usuario = require("./../models/Usuario");
 const bcrypt = require("bcryptjs");
+const { generarJWT } = require("../helpers/jwt");
 
 exports.getUsuarios = async (req, res) => {
   const usuarios = await Usuario.find({}, "nombre email role google isActive");
@@ -31,9 +31,13 @@ exports.crearUsuario = async (req = request, res = response) => {
     usuario.password = bcrypt.hashSync(password, salt);
 
     await usuario.save();
+
+    const token = await generarJWT(usuario._id);
+
     res.json({
       ok: true,
       usuario,
+      token,
     });
   } catch (error) {
     console.log(error);

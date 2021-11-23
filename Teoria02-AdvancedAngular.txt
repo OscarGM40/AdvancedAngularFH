@@ -294,4 +294,102 @@ exports.borrarUsuario = async (req = request, res = response) => {
     usuarioDB.isActive = false;
     await usuarioDB.save();
 
-VIDEO ....
+					VIDEO 116 LOGIN DE USUARIO 
+
+NOTA: ya que estamos usando Sync comparamos las pass con compareSync:
+   // verificar password
+   const validPassword = bcrypt.compareSync(password, usuario.password);
+Fijate que esto sólo trata de ver si harían match,pero no la encripta.
+
+NOTA: Cuando llamamos la función de Express(), y ya esta inicializado, express retorna la instancia creada y no una nueva, y todo es pasado por referencia después, así que no es que estamos duplicando todo el código... Aunque si exportamos la variable app (export app ), entonces nos aseguramos de que ni siquiera tenga que llamar el método que comprobará si ya se inicializó
+Fijate que interezante -_-
+
+					VIDEO 117 GENERACIÓN DE TOKEN JWT
+
+Un token es utilizado para mantener de forma pasiva el estado del usuario en mi aplicación.Imagina que tuviera 1 millón de usuarios.
+Un token siempre es mandado al backend,el cual lo verifica con cierta información que tiene él,como la semilla.
+Un token siempre está compuesto por el header,un punto,el body, un punto y la firma.Se puede guardar lo que quiera en él,pero no se recomienda guardar información sensible(passwords,nºs de tarjetas de crédito,...)
+Ver el id,o el email,etc, no se considera peligroso.De todas formas,si alguien cambiará el body,es decir esa información,aún seguirá sin hacer match la firma cuando llegue al bakcend.
+
+NOTA: FH comenta que jwt siempre ha sido sincrono desde tiempos inmemoriales.Es por ello que tendremos que usar una Promise custom:
+
+exports.generarJWT = (uid) => {
+  return new Promise((resolve, reject) => {
+    const payload = {
+      uid,
+    };
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN,
+      },
+      (err, token) => {
+        if (err) {
+           console.log(err);
+          reject("Error al generar token: " + err);
+        } else {
+          resolve(token);
+        }
+      }
+    );
+  });
+};
+
+						VIDEO 118 REVISION DEL TOKEN
+
+El token se usa para autenticar o certificar en el backend que el usuario que está detrás de la petición cumple ciertos requisitos,como ser Admin o tener cierto id,etc...
+Para realizar esto se usará algún middleware que compruebe estas características.
+Asi pues hay que securizar las rutas comprobando el token.Veamos un ejemplo:
+
+NOTA:los token por defecto viajan por el body de la petición.No cuesta nada hacer que viajen por los headers de la petición,lo cual es más seguro.
+	
+IMPORTANTE: cualquier cosa que se guarde en los middlewares voy a tenerlo disponible cuando vaya al controlador,pues se ejecutan antes de la respuesta del backend:
+
+/* GET ALL USERS  */
+router.get("/",validarToken, getUsuarios); <- en validarToken puedo guardar cualquier cosa que lo tendré en el getUsuarios(además,como es JS el objeto req es pasado por referencia y es el mismo y además puedo crear propiedades)
+
+NOTA: fijate que este middleware,en caso de tener varios,debería ir el primero,porque para qué ejecutar un proceso cuando no está autenticado el usuario y se va a parar la response??:
+
+router.put(
+  "/:id",
+  [
+    validarToken, <- mejor aqui y no procesar los checks 
+    check("nombre", "El nombre es obligatorio").not().isEmpty(),
+    check("email", "El email es obligatorio").isEmail(),
+    check("role", "El role es obligatorio").not().isEmpty(),
+    validarCampos,
+  ],
+Interesante revisar el orden,asinto
+NOTA: Carlos, no se si te sirve, pero, lo que yo hago, sin importar el lenguaje que utilice, ademas del certificado, cuando compones el token, para formarlo, yo le agrego, ademas del usuario, la ip de donde se conecta, y el navegador, con esto, encripto los datos, dando como resultado una sola cadena, esa cadena, es la que envio en el token.
+
+Si te copian el mismo, cosa que no deberia pasar,  puedes usar siempre post y validar el csfr, es decir, el origen de la solicitud y su destino, al momento de recibir en el server el token, valido que el mismo sea valido, si lo es, desencripto lo encriptado, valido que el origen que genero, sea, identico al request que me enviaron. si no lo es. algo paso.
+
+Claro, que lo que te expongo aqui, no sirve para empresas que tienen mas de un isp como proveedor de servicio y generando una solicitud con diferentes proveedores ( balanceo de carga / faillover ) Pero, si un banco hace esto, no veo porque tu app no.
+
+Fijate que el csrf puede ser un problema(investigar más cuando pueda).
+
+			SECCION 11 CRUD DE MEDICOS Y HOSPITALES - SUBIR ARCHIVOS
+
+Esta sección tiene varias tareas e información importante sobre:
+
+1. CRUD de médicos y hospitales
+2. Una tarea robusta con su respectivo documento y resolución
+3. Códigos útiles de Mongoose
+4. Populate
+5. Gets
+6. Paginar resultados
+7. Búsquedas específicas y globales
+8. Subida de archivos al servidor
+9. Asignación de imagen a un hospital, medico o usuario
+10. Formas de exponer archivos a la web
+11. Manejo del FileSystem
+12. Proteger imágenes
+13. Generar imagen por defecto
+Al finalizar, subiremos los cambios a GitHub y haremos un backup local de nuestro repositorio
+
+						VIDEO 123 INICIO CRUD MEDICOS
+
+
+
+

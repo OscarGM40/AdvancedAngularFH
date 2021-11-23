@@ -13,6 +13,7 @@ app.use(cors());
 
 // peticiones de las rutas al Router de Express
 app.use('/api/usuarios',require('./routes/usuarios.routes'))
+app.use('/api/login',require('./routes/auth.routes'))
 
 
 
