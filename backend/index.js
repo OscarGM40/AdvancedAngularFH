@@ -13,6 +13,8 @@ app.use(cors());
 
 // peticiones de las rutas al Router de Express
 app.use('/api/usuarios',require('./routes/usuarios.routes'))
+app.use('/api/hospitales',require('./routes/hospitales.routes'))
+app.use('/api/medicos',require('./routes/medicos.routes'))
 app.use('/api/login',require('./routes/auth.routes'))
 
 

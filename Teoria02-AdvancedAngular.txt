@@ -390,6 +390,65 @@ Al finalizar, subiremos los cambios a GitHub y haremos un backup local de nuestr
 
 						VIDEO 123 INICIO CRUD MEDICOS
 
+NOTA:fijate como puedo crear una relación usando mongoose.Types.ObjectId y ref:
+
+const HospitalSchema = new mongoose.Schema(
+  {
+    nombre: { type: String, required: true },
+    img: { type: String },
+    usuario: { type: mongoose.Schema.Types.ObjectId, ref: "Usuario" }
+
+Esto indica una relación del Hospital con el Usuario,pero no al revés.
+Fijate como en mi app podia haber creado userId en los posts con una ref,hubiera sido mejor opción,en vez de buscar por el id del usuario lo relaciono de primeras.
+
+IMPORTANTE: siempre que quiera puedo renombrar la coleccion al nombre que quiera en vez de dejar que lo haga mongoose(se usa donde los timestamps):
+
+  new Schema({ ... },{  collection: 'hospitales',	}
+
+IMPORTANTE: cuando la relación sea de N a 1 se usa un array 
+,cuando es de uno a uno se usa un objeto.Ejemplo:
+ hospital: { type: mongoose.Schema.Types.ObjectId, ref: "Hospital" } <- 1 a 1
+ hospital: [{ type: mongoose.Schema.Types.ObjectId, ref: "Hospital" }] <- 1 a n
+En este ultimo caso un medico puede estar en muchos hospitales,no lo haremos así,un médico sólo podrá estar destinado a un único hospital.
+
+La única diferencia es que sea un Objeto o un Array,asinto.Es decir si lo que represente el Schema(es decir,un medico) va a tener N hospitales usaré un array(fijate que un hospital va a tener un sólo usuario-creador,asi que 1 a 1).
+Fijate que un hospital va a tener N medicos.
+
+					VIDEO 125 CREAR HOSPITALES
+
+DE nuevo fijate la diferencia en la cardinalidad de la relación:
+
+const storySchema = Schema({
+  author: { type: Schema.Types.ObjectId, ref: 'Person' },
+  title: String,
+  fans: [{ type: Schema.Types.ObjectId, ref: 'Person' }]
+});
+
+story puede tener muchos fans pero sólo un autor.
+En cuanto a crear un hospital simplemente cogo el uid del usuario que está en req.uid tras el decode:
+
+
+exports.crearHospital = async (req, res = response) => {
+  const hospital = new Hospital(req.body);
+  hospital.usuario = req.uid;
+
+  try {
+    const hospitalDb = await hospital.save();
+    res.json({
+      ok: true,
+      hospital: hospitalDb, 
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      ok: false,
+      msg: "Error inesperado",
+    });
+  }
+};
+
+Nota:fijate que para crear el médico hay que usar isMongoId como middleware extra en otro check.
+
 
 
 
