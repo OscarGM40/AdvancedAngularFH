@@ -4,11 +4,32 @@ const bcrypt = require("bcryptjs");
 const { generarJWT } = require("../helpers/jwt");
 
 exports.getUsuarios = async (req, res) => {
-  const usuarios = await Usuario.find({}, "nombre email role google isActive");
+
+  // ojo que si hago el Number(undefined) necesito || 0
+  const desde = Number(req.query.desde) || 0;
+  // console.log(desde);
+
+  // Realmente no quiero ejecutar estas dos tareas una detrás de otra y sumar sus tiempos porque puedo lanzarlas a la vez con Promise.all
+
+  /*   const usuarios = await Usuario
+    .find({}, "nombre email role google isActive")
+    .skip(desde)
+    .limit(5);
+  const total = await Usuario.countDocuments(); */
+
+  // Fijate que Promise.all va a respetar el orden de cada promesa asi que puedo usar desestructuración de arreglos y asignar posicionalmente el nombre que quiero.Además recuerda que Promise.all también es una promesa(tengo que usar async o then).
+  const [ usuarios, total ] = await Promise.all([
+    Usuario.find({},"nombre email role google isActive")
+      .skip(desde)
+      .limit(5),
+    Usuario.countDocuments(),//este va a ser [1]
+  ]);
+
 
   res.json({
     ok: true,
     usuarios,
+    total
   });
 };
 

@@ -449,6 +449,147 @@ exports.crearHospital = async (req, res = response) => {
 
 Nota:fijate que para crear el médico hay que usar isMongoId como middleware extra en otro check.
 
+					VIDEO 128 GET-POPULATE
 
+Siempre que quiera hacer una consulta populada simplemente uso el método populate(campo,campos a mostrar).Fijate que en el método me refiero al nombre de una propiedad del modelo,como usuario,usuarioId,etc la cual debe ser un mongoId con una ref a otro modelo
+
+  const hospitales = await Hospital.find({}).populate('usuario', 'nombre email');
+
+Y si quiero popular más de un campo simplemente concateno más de un método populate:
+
+exports.getMedicos = async (req, res = response) => {
+
+  const medicos = await Medico.find().populate('usuario', 'nombre email img').populate('hospital','nombre img');
+  
+  res.json({
+    ok: true,
+    medicos
+  });
+};
+
+			VIDEO 129 PAGINAR LOS RESULTADOS DE LAS BÚSQUEDAS
+
+Fijate que fácil ha hecho FH una paginación:
+
+exports.getUsuarios = async (req, res) => {
+
+  // ojo que si hago un Number(undefined | null) necesito || 0
+  const desde = Number(req.query.desde) || 0;
+
+  // Fijate que Promise.all va a respetar el orden de cada promesa asi que puedo usar desestructuración de arreglos y asignar posicionalmente el nombre que quiero.Además recuerda que Promise.all también es una promesa(tengo que usar async o then).
+  const [ usuarios, total ] = await Promise.all([
+    Usuario.find({},"nombre email role google isActive")
+      .skip(desde)
+      .limit(5),
+    Usuario.countDocuments(),//este va a ser [1]
+  ]);
+
+
+  res.json({
+    ok: true,
+    usuarios,
+    total
+  });
+};
+
+NOTA: también hay librerias para paginación como mongoose-paginate.Está en concreto se conecta al modelo como un plugin:
+
+const mongoosePaginate = require('mongoose-paginatev2)
+UsuarioSchema.plugin(mongoosePaginate). <- igual que updateIfCurrent
+
+Despues en el controlador en vez de usar find se usa su método paginate con las options de configuración deseadas:
+const options = {
+        populate,
+        limit: 2,
+        page: req.query.page
+    }
+ 
+    Usuario.paginate({},options, function(err, result){
+        if(err){
+            return res.status(500)
+Realmente es bastante sencillo implementar paginacion sin librerias,pero es otra opción.
+NOTA:recuerda que el operador || opera sobre null y undefined también.
+
+			VIDEO 130 RUTA Y CONTROLADOR PARA BUSCAR
+
+Vamos a crear un endpoint para buscar por un patrón en todas las colecciones.El enpoint será algo como /api/todo/patrón(ejemplo /api/todo/Fernando | /api/todo/HospitalCentral).
+La busqueda será insensible a mayúsculas y requerirá el token.
+NOTA:puedo setear variables en Postman en diferentes scopes.Lo mejor es usar un script:
+
+Use pm.globals to define a globals variable:
+pm.globals.set("variable_key", "variable_value");
+
+Use pm.collectionVariables to define a collection variable:
+pm.collectionVariables.set("variable_key", "variable_value");
+
+Use pm.environment to define an environment variable (in the currently selected environment):
+pm.environment.set("variable_key", "variable_value");
+
+
+		VIDEO 131 BUSQUEDA GENERAL EN TODAS LAS COLECCIONES
+
+Ya tenemos rescatado un queryParam en el controlador,pero no hacemos nada con él.Realmente es muy fácil buscar insensitivamente por un patrón con la clase RegExp(patron,'i'):
+const usuarios = await Usuario.find({nombre: new RegExp(patron,'i')});
+const medicos = await Medico.find({nombre: new RegExp(patron,'i')});
+const hospitales = await Hospital.find({nombre: new RegExp(patron,'i')});
+
+IMPORTANTE: fijate que hace como un include,una sóla letra que coincida va a cumplir con la regexp,quizás quiera algo más selectivo,y fijate que esto es mejor usar una única Promesa:
+
+const [ usuarios, medicos, hospitales ] = await Promise.all([
+ Usuario.find({nombre: new RegExp(patron,'i')}),
+ Medico.find({nombre: new RegExp(patron,'i')}),
+ Hospital.find({nombre: new RegExp(patron,'i')})
+]);
+
+NOTA de FH(dios full-stackiano): Hay dós tipos de parámetros o argumentos para los servicios REST,los opcionales y los obligatorios.
+Obligatorios: Están definidos en la RUTA y son necesarios ,ya que sin ellos no funciona el servicio REST.Éstos los leemos con req.params.patron(i.e).
+Opcionales: son los que visualmente no están en la ruta,pero tú sabes que los puedes enviar,y si los envias los usas,pero si no los envias no pasa nada,no cae el servicio REST.Estos los leemos con req.query.desde.
+
+NOTA:en vez de usar patrones con regexp puedo crear un index en el campo que quiera y buscar con $text:
+
+1- db.hospitales.createIndex([nombre:"text"]) <- le pongo un indice al campo nombre con el nombre de text(parece que debe llamarse asi)
+
+2- db.hospitales.find( {$text:{ $search:"user 01" } })
+
+				VIDEO 132 BUSQUEDA POR COLECCION ESPECIFICA
+
+Realmente es bien sencillo buscar por una coleccion especifica.Fijate que querer realizar esta consulta implica que voy a tener dos argumentos obligatorios(la colección y el término a buscar)
+Asi que si son obligatorios hay que usar los params:
+
+// /api/todo/coleccion/:tabla/:patron
+exports.getByCollectionAndPattern = async (req, res = response) => {
+  const tabla = req.params.tabla;
+  const patron = req.params.patron;
+  const regex = new RegExp(patron, "i");
+
+  let data;
+  switch (tabla) {
+    case "medicos":
+      const data = await Medico.find({ nombre: regex })
+        .populate("usuario", "nombre img")
+        .populate("hospital", "nombre img");
+      break;
+    case "hospitales":
+      const data = await Hospital.find({ nombre: regex })
+        .populate("usuario", "nombre img");
+      break;
+    case "usuarios":
+      const data = await Usuario.find({ nombre: regex });
+      break;
+    default:
+      return res.status(400).json({
+        ok: false,
+        msg: "La tabla tiene que ser usuarios | medicos | hospitales",
+      });
+  }
+
+  res.json({
+    ok: true,
+    resultados: data,
+  });
+};
+Debo tratar de ver si el argumento es obligatorio(:argumento) o si es opcional(?arg).Es obvio que son obligatorios,asi como lo será el termino a introducir en el input de socialNet.Es un termino obligatorio.
+
+					VIDEO 132 SUBIR ARCHIVOS AL SERVIDOR
 
 
