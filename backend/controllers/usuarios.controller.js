@@ -19,7 +19,7 @@ exports.getUsuarios = async (req, res) => {
 
   // Fijate que Promise.all va a respetar el orden de cada promesa asi que puedo usar desestructuración de arreglos y asignar posicionalmente el nombre que quiero.Además recuerda que Promise.all también es una promesa(tengo que usar async o then).
   const [ usuarios, total ] = await Promise.all([
-    Usuario.find({},"nombre email role google isActive")
+    Usuario.find({},"nombre email role google isActive img")
       .skip(desde)
       .limit(5),
     Usuario.countDocuments(),//este va a ser [1]

@@ -592,4 +592,162 @@ Debo tratar de ver si el argumento es obligatorio(:argumento) o si es opcional(?
 
 					VIDEO 132 SUBIR ARCHIVOS AL SERVIDOR
 
+Este código sirve para subir cualquier archivo(pdf,excel).Usaremos /api/uploads/medicos | usuarios | hospitales/:id e iremos por PUT.
+Iremos por PUT porque es una actualización de un documento.
+
+NOTA:fijate como crea un folder uploads en el backend con tres subfolders medicos & hospitales & usuarios para albergar los recursos según colección(param :tipo)
+
+IMPORTANTE:el método includes(element) sirve tanto para un String como un Array.Si se usa sobre un arreglo mirará si el arreglo incluye ese element pasado por argumento.Si se usa sobre un string mira si el string completo incluye ese substring que le pase.Es un método fundamental:
+
+const tiposValidos=['hospitales','usuarios','medicos'];
+if(!tiposValidos.includes(tipo)) <- puedo usarlo sobre un array
+const palabra="palabra";
+if(palabra.includes('bra')) <- o sobre un string mirando por un substring en él
+
+NOTA: express por defecto ya tiene una forma de atrapar un file,pero vamos a usar una libreria(que es un simple middleware) para atrapar ese file que se llama express-fileupload
+Documentación: https://www.npmjs.com/package/express-fileupload
+> npm i express-fileupload
+
+Dependiendo del name del input de tipo file lo rescato desde req.files:
+Imagina un <input name="foo" type="file" />
+Tendré el recurso en req.files.foo.
+NOTA:puedo acceder a las propiedades asi:
+req.files.foo.name: "image.jgp" <- acceder al nombre
+req.files.foo.mv: una función para mover el file en mi servidor(es una cb)
+req.files.foo.mimetype:acceso al mimetypes
+req.files.foo.data: una buffer representation del file
+req.files.foo.tempFilePath: un path para almacenamiento temporal
+req.files.foo.size: acceso al uploaded size en bytes
+
+Express-fileupload soporta múltiple subida de archivos.Veamos un ejemplo sencillo.En el front tengo un <input type="file" con name de 'sampleFile':
+    <form ref='uploadForm' 
+      id='uploadForm' 
+      action='http://localhost:8000/upload' 
+      method='post' 
+      encType="multipart/form-data">
+        <input type="file" name="sampleFile" />
+        <input type='submit' value='Upload!' />
+    </form>   
+En el backend instalo el modulo y lo requiero(recuerda que es un middleware):
+const fileUpload = require('express-fileupload');
+//opciones por defecto(se pueden configurar si es necesario)
+app.use(fileUpload())
+
+* NOTA Es buena idea pasar un limite.Para pasarle una configuración se usa Busboy
+app.use(fileUpload({limits:{fileSize:50*1024*1024}})
+Ver doc aqui:https://github.com/mscdex/busboy#api
+
+app.post('/upload',(req,res) => {
+ if(!req.files || Object.keys(req.files).length === 0) <- no hay file
+sampleFile= req.files.sampleFile;
+uploadPath= __dirname + '/somewhere/on/your/server'+ sampleFile.name;
+
+* fijate que es file.mv(ruta,cb())
+sampleFile.mv(uploadPath,(err) => ...
+
+Con múltiples archivos es simplemente lo mismo:
+
+<input type="file" name="my_profile_pic" />
+<input type="file" name="my_pet" />
+<input type="file" name="my_cover_photo" />
+
+app.post('/upload', function(req, res) {
+  // Uploaded files:
+  console.log(req.files.my_profile_pic.name);
+  console.log(req.files.my_pet.name);
+  console.log(req.files.my_cover_photo.name);
+});
+Librería increible,asinto.
+
+NOTA:fijate como el objeto router también tiene acceso a use y puede aplicar middlewares:
+
+const expressFileUpload = require('express-fileupload');
+
+/* NOTA si bien los middleware se aplican con app.use(middleware) también puedo usar router.use(middleware) y se aplicará igual */
+const router = require("express").Router();
+
+router.use(expressFileUpload({
+  limits: { fileSize: 50 * 1024 * 1024 },//50MB
+}));
+
+Genial.
+
+				VIDEO 134 SUBIR ARCHIVOS PARTE 2
+
+Vamos a usar la libreria uuid para generar ids únicos para las imágenes.
+>npm i uuid
+NOTA: es el middleware anterior el que me deja acceder a los files en el backend
+
+const file = req.files.imagen; <- puedo hacer esto por la libreria
+
+* Puedo sacar la extension con split('.').pop() y el name con slice(0,-4);
+const extension = file.name.split('.').pop();
+
+const extensionesValidas = ['png', 'jpg', 'gif', 'jpeg'];
+  if(!extensionesValidas.includes(extension)){
+
+Puedo usar timestamps o usar uuid.Investigar cual es mejor opción.Sea como sea le doy un nombre único y lo muevo con file.mv(path,cb):
+  const nombreArchivo = `${uuidv4()}.${file.name.slice(0,-4)}.${extension}`;
+
+file.mv(path, (err) => {
+    if(err){
+      return res.status(500).json({
+        ok: false,
+        msg: 'Error al mover el archivo'
+      });
+    }
+    // aquí ya se subió la imagen
+    res.json({
+      ok: true,
+      msg: "Archivo subido satisfactoriamente",
+      nombreArchivo
+    });
+  });
+NOTA: cabe recalcar que albergar el backend y las imágenes entraña cierto riesgo.Un hacker podría subir algo disfrazado de imagen y exponer mis claves.Se recomienda separar el backend de la subida de imágenes usando Cloudinary o Firebase.
+
+		VIDEO 135 ASIGNAR LA IMAGEN A UN HOSPITAL,USUARIO O MÉDICO
+
+De nuevo Fernando recomienda crear un backend sólo para la súbida de imágenes o usar software de terceros.Una vez claro esto,hay que actualizar el field img | imagen del documento pertinente en MongoDB.
+
+NOTA: node ya tiene en su core un paquete para leer archivos,carpetas,borrarlos,etc(para acceder al file system).Es el paquete 'fs':
+const fs = require('fs');
+
+* Puedo comprobar si existe un file o un folder con existsSync y borrarlo con unlink | unlinkSync
+const pathViejo = `./uploads/medicos/${medico.img}`;
+   if (fs.existsSync(pathViejo)) {
+        fs.unlinkSync(pathViejo);
+      }
+
+Ya sólo quedaría actualizar el field y volver a guardar el documento:
+medico.img = nombreArchivo;
+await medico.save();
+
+			VIDEO 136 TERMINANDO CON LA ACTUALIZACIÓN DEL DOCUMENTO
+
+IMPORTANTE: nada me impide meter entre llaves cada case de un switch.De esta forma cada variables tendrá el scope del case en vez del de todo el switch,permitiendome usar const:
+
+ case "usuarios": {
+      const usuario = await Usuario.findById(id);
+      if (!usuario) {
+        console.log("No existe un usuario con ese id");
+        return false;
+      }
+      const pathViejo = `./uploads/usuarios/${usuario.img}`;
+      borrarImagen(pathViejo);
+      usuario.img = nombreArchivo;
+      await usuario.save();
+      return true;
+    }
+case "...": {} <- perfecto para el scope
+
+			VIDEO 137 NOTAS Y RECURSOS 
+
+Fernando deja éste código a mano para las siguientes clases:
+
+var serveIndex = require('serve-index');
+app.use(express.static(__dirname + '/'))
+app.use('/uploads', serveIndex(__dirname + '/uploads'));
+
+Doc:https://github.com/expressjs/serve-index
+
 
