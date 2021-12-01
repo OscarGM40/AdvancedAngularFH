@@ -750,4 +750,114 @@ app.use('/uploads', serveIndex(__dirname + '/uploads'));
 
 Doc:https://github.com/expressjs/serve-index
 
+			VIDEO 138 CREAR UNA RUTA PARA OBTENER IMÁGENES
+
+Queremos un servicio que nos muestre las imágenes,no sólo queremos subirlas.Irá por GET,y mandaremos el path completo de la imágen.
+
+NOTA: fijate que la key imagen del <input type="file" name="imagen"> va por el body,no por los headers.
+El endpoint será asi: http://localhost:8070/api/upload/usuarios/47f2c42a-0d36-436b-b145-38b93c5e30be.ilm_terminator2.jpg
+NOTA: fijate que el error cannot GET ... es que no existe esa ruta o no se accede por GET si es que existe.
+
+El módulo o librería del core de Node 'path' me sirve para trabajar con rutas y directorios, pudiendo crear  paths de rutas:
+const path = require('path')
+
+* Fijate que la variable __dirname me va a dar la ruta de donde esté actualmente.Nada que ver con la raíz del proyecto.Es la ubicación actual.Con esto en mente puedo mirar si la imagen existe antes de mandarla:
+
+* Desde donde estoy vas un directorio atrás...
+const pathImagen = path.join(__dirname, `../uploads/${tipo}/${foto}`);
+
+Puede ser buena idea mandar una imagen por defecto si no existe la imagen que busca el usuario.
+IMPORTANTE: 'path' es solo para crear y obtener/montar una ruta pero para comprobar si existe un file o folder en esa ruta hay que usar el módulo fs.
+
+  if (fs.existsSync(pathImagen)) {
+    res.sendFile(pathImagen);
+  } else {
+    const pathNoImage = path.join(__dirname, "../uploads/no-image.jpg");
+    res.sendFile(pathNoImage);
+  }
+Y como es un file no usaré res.json sino res.sendFile.Fijate que si quisiera mandar un .doc o un .txt o un .pdf puedo hacer que el navegador lo descargue con res.download(pathAlFile).
+NOTA: puedo usar endpoints que al visitarlos el navegador se descargue un .doc o un .pdf,etc.
+Por último voy a dejar el tag-release para después de la siguiente sección 
+
+			SECCION 12 AUTENTICACIÓN POR GOOGLE
+
+Vamos a usar las propias librerías de Google en vez de Firebase.Esto tendrá alguna consideración extra a tener en cuenta.
+
+Esta sección esta especializada en implementar el Google Sign-in en nuestro backend server:
+
+1- Crear una aplicación en Google Developer Console
+2- Generar el ID de nuestra aplicación y un ID Secreto de servidor
+3- Crear un login básico de pruebas usando el API de Google
+4- Generar un Token desde el front-end
+5- Validar el Token en nuestro back-end
+6- Tip para generar la documentación de nuestros servicios automáticamente
+
+Al finalizar, crearemos el release tag y realizamos los respectivos respaldos en GIT y GitHub
+NOTA: fijate como usar este tipo de autenticaciones por redes sociales crea un token en el frontend en vez de en el backend.Seguir investigando.
+Mas info aqui: https://developers.google.com/identity/sign-in/web/sign-in
+
+VIDEO 144 CREAR IDENTIFICADOR DE UNA APLICACION + SECRET_KEY - GOOGLE DEVELOPER
+
+Para crear credenciales primero debería crear un proyecto.Con un proyecto seleccionado voy a credenciales y crear credenciales(de tipo OAuth2).
+NOta: cada proyecto puede tener vinculada una sóla app.Además en la pantalla de consentimiento tengo que ponerla externa,para que cualquier usuario pueda hacer login(esto hará que la revisen ellos)
+Habrá que darla un nombre,icono,dominio,etc...(ya volveremos con el dominio)
+
+Una vez semićompletada la pantalla de consentimiento ya no debería decirme que la rellene,asi que vuelvo a crear credentials y creo unos de tipo OAuth2 para una alicación web
+
+La doy un nombre y tendré que especificar el origen y a donde redireccionar(el origen es el backend(http://localhost:8070 en micaso) y la url de redireccionamiento sería http://localhost:4200)).Lo veremos más adelante.
+
+Me dará un identificador único de la aplicación y un secret_key.Los copio en el .env
+Recuerda que con estos ids se tiene control administrativo sobre la aplicación.
+
+NOTA: Google SignIn sigue siendo gratis y no especifica ninguna restricción al limite de usuarios.
+
+			VIDEO 145 CREANDO UNA APP RÁPIDA PARA PROBAR EL GOOGLE SIGNIN
+
+Vamos a crear una pequeña template en el servidor.Habrá que configurar express para ello con el middleware static(ruta,rutaAlEstático:
+
+app.use(express.static('public'));
+NOTA:fijate que usar app.use("/",express.static) y lo de arriba es lo mismo.
+Sea como sea en cuanto defina un middleware para estáticos con la ruta ya podré acceder a la template desde el navegador(apuntando al servidor,claro.
+
+POr último,podría usar varios middlewares.Por ejemplo:
+app.use("video",express.static('public/video')) 
+app.use("image",express.static('public/image'))
+Con uno accedería con backend+port/video y el otro con url/image.Puedo usar el modulo path para construir rutas si es necesario.
+
+Recuerda incluir a la template las etiquetas script y meta de la guia con la cdn a la libreria de Google Platform y el id de cliente respectivamente:
+
+ <meta name="google-signin-client_id" content="139109903112-ingc2d6nd9a88erptsdbglpsaonrrumm.apps.googleusercontent.com">
+  <title>Demo Google SignIn</title>
+  <script src="https://apis.google.com/js/platform.js" async defer></script>
+Dado que es una app de testeo no usamos variables de entorno pero las usaremos para la app final.
+
+Implemento el botón:
+<div class="g-signin2" data-onsuccess="onSignIn"></div>
+Fijate que la CDN de la libreria me da los estilos y que estamos llamando a una funcion onsuccess a través de un custom attribute.
+
+NOTA:fijate que dejamos a propósito el origen y redireccionamiento vacios.Debería ver este error en el browser:
+{error: 'idpiframe_initialization_failed', details: "Not a valid origin for the client: http://localhos…egister this origin for your project's client ID."}
+Obviamente hay que añadir el dominio en el proyecto
+
+TAmbién nos proporcionan el script para recuperar los datos(habrá que crear un script inline):
+<script>
+function onSignIn(googleUser) {
+  var profile = googleUser.getBasicProfile();
+  console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
+  console.log('Name: ' + profile.getName());
+  console.log('Image URL: ' + profile.getImageUrl());
+  console.log('Email: ' + profile.getEmail()); // This is null if the 'email' scope is not present.
+  const id_token = googleUser.getAuthResponse().id_token;
+      console.log('ID Token: ' + id_token);
+ }
+</script>
+NOTA: recuerda que puedo usar pequeños scripts inline en la misma template.Para algo tan pequeño no es necesario crear un .js y enlazarlo,asinto.Además debo trabajar con tokens,y olvidarme del uid de Google de cada usuario,ya lo pone en el comentario.
+Fijate que tuve que añadir la generación del token.
+Mandaremos este token al backend,alli lo analizaremos usando librerias de Google y si es válido podremos usar la imagen,email,nombre de usuario,etc.pero siempre trabajaremos en base a tokens(y en este caso en base a su token).
+
+				VIDEO 146 VALIDAR TOKEN DE GOOGLE EN MI BACKEND
+
+
+
+
 

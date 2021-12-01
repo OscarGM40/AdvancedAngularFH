@@ -10,6 +10,8 @@ dbConnection();
 // middlewares de Node
 app.use(express.json())
 app.use(cors());
+// middleware para poner una carpeta publica(podria poner alli archivos html o imagenes,videos,archivos de audio,...)Lo que ponga alli será visible para el navegador y cualquier usuario
+app.use("/",express.static('public'));
 
 // peticiones de las rutas al Router de Express
 app.use('/api/usuarios',require('./routes/usuarios.routes'))

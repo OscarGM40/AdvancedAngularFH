@@ -1,6 +1,8 @@
 const { request, response } = require("express");
 const { v4: uuidv4 } = require("uuid");
 const { actualizarImagen } = require("../helpers/actualizar-imagen");
+const path = require('path')
+const fs = require('fs');
 
 exports.fileUpload = async (req = request, res = response) => {
   // recuerda params los obligatorios,query los opcionales
@@ -41,9 +43,9 @@ exports.fileUpload = async (req = request, res = response) => {
         extensionesValidas.join(", "),
     });
   }
-
+  const fileName = extension === "jpeg" ? file.name.slice(0,-5) : file.name.slice(0,-4);
   // le ponemos un nombre único:
-  const nombreArchivo = `${uuidv4()}.${file.name.slice(0, -4)}.${extension}`;
+  const nombreArchivo = `${uuidv4()}.${fileName}.${extension}`;
 
   //path para guardar la imagen según el tipo(se recomienda usar path.resolve u otros):
   const path = `./uploads/${tipo}/${nombreArchivo}`;
@@ -64,3 +66,33 @@ exports.fileUpload = async (req = request, res = response) => {
     nombreArchivo,
   });
 };
+
+exports.retornaImagen = async (req = request, res = response) => {
+  const tipo = req.params.tipo;
+  const foto = req.params.foto;
+  
+  const pathImagen = path.join(__dirname, `../uploads/${tipo}/${foto}`);
+
+  if(fs.existsSync(pathImagen)){
+    res.sendFile(pathImagen);
+  }else {
+    const pathNoImage = path.join(__dirname, "../uploads/no-image.jpg");
+    res.sendFile(pathNoImage);
+  }
+}
+
+exports.descargaImagen = async(req, res = response) => {
+  const tipo = req.params.tipo;
+  const foto = req.params.foto;
+
+  const pathImagen = path.join(__dirname, `../uploads/${tipo}/${foto}`);
+
+  if(fs.existsSync(pathImagen)){
+    res.download(pathImagen);
+  } else {
+    const pathNoImage = path.join(__dirname, "../uploads/no-image.jpg");
+    res.download(pathNoImage);
+  }
+}
+
+
