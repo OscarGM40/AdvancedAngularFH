@@ -813,7 +813,7 @@ NOTA: Google SignIn sigue siendo gratis y no especifica ninguna restricción al 
 
 			VIDEO 145 CREANDO UNA APP RÁPIDA PARA PROBAR EL GOOGLE SIGNIN
 
-Vamos a crear una pequeña template en el servidor.Habrá que configurar express para ello con el middleware static(ruta,rutaAlEstático:
+Vamos a crear una pequeña template en el servidor.Habrá que configurar express para ello con el middleware express.static(ruta,rutaAlEstático:
 
 app.use(express.static('public'));
 NOTA:fijate que usar app.use("/",express.static) y lo de arriba es lo mismo.
@@ -857,7 +857,99 @@ Mandaremos este token al backend,alli lo analizaremos usando librerias de Google
 
 				VIDEO 146 VALIDAR TOKEN DE GOOGLE EN MI BACKEND
 
+Realmente no deberia haber confiado en el uid o el correo,etc.Sólo puedo confiar en el token que me envian.
+La forma recomendada para verificarlo es instalar alguna de las librerias de Google API(usaremos google-auth-library):
+>npm i google-auth-library:
+	
+Despues hay que llamar una función helper para verificar el token
 
+* Fijate que en la doc no le pasan el token como argumento xd
+async function googleVerify( token ) {
+  const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_ID,  
+  });
+  const payload = ticket.getPayload();
+  const userid = payload['sub'];
 
+  const { name,email,picture } = payload;
+  return { name, email, picture, userid };
+}
+ verify().catch(console.error) <- fijate como al llamarla capturo el error.Buena.Sin embargo lo mejor es crearla en un helper,exportarla y llamarla:
+module.exports = googleVerify;
+
+Despues el controlador llamará a este helper.En cuanto compruebe que el token es válido debería crear el usuario en Mongo,etc:
+exports.googleSingIn = async (req = request, res = response) => {
+  const googleToken = req.body.token;
+
+  try {
+    const { name, email, picture } = await googleVerify(googleToken);
+
+    res.json({
+      ok: true,
+      msg: "Usuario logeado correctamente",
+      name,
+      email,
+      picture,
+    });
+
+		VIDEO 147 CREAR EL REGISTRO EN NUESTRA COLECCION DE USUARIOS
+
+Realmente ahora es cuesta abajo.Si existe el email simplemente le cambio la propiedad google a true(respetando las demás).Si no existe nadie con ese email creo el usuario.El email es el que se obtiene de verificar y extraer el payload del token proporcionado por Google.Debo cambiar mi app.
+
+try {
+     const { name, email, picture } = await googleVerify(googleToken);
+     
+     // un usuario podria registrarse de forma normal y despues querer acceder por Google.Debo manejar esto
+     const usuarioDB = await Usuario.findOne({ email });
+     let usuario;
+     if (!usuarioDB) {
+         // si el usuario no existe en la base de datos, lo creo
+         usuario = new Usuario({
+               nombre: name,
+               email,
+               password: '@@@', //no se usará
+               img: picture,
+               google: true
+         });
+       } else {
+         // si el usuario existe, actualizo su información
+         usuario = usuarioDB;
+         usuario.google = true;
+         // si le mantengo el campo password va a poder acceder por ambos métodos de autenticación.DEbo dejarlo
+       }
+         // guardar el usuario
+         await usuario.save();
+         // generar el token
+         const token = await generarJWT(usuarioDB.id);
+
+    res.json({
+      ok: true,
+      msg: "Usuario logeado correctamente",
+      token
+    });
+La clave está en el let usuario.Debería implementar esta forma yo.Parece más correcta además que deja ambas autenticaciones.
+
+			VIDEO 148 DOCUMENTAR SERVICIOS DE FORMA AUTOMÁTICA
+
+Postman puede documentar los servicios REST de forma automática.ESto permite inofrmar a otros desarrolladores de que argumentos usan los controladores,etc.
+
+Para documentar una colección  en Postman doy click derecho sobre una colección y luego en 'publish docs'.Me abrirá una interfaz web en el browser.
+Una vez termine con las opciones doy en Publish collection.Me creará una url con toda la documentación
+Cuando visite esa URL puedo cambiar entre lenguajes,librerias y formas de hacer una petición.Es una opción muy interesante.
+
+				SECCION 13 MEDICOS Y HOSPITALES - CRUD
+
+Temas de la sección
+En esta sección continuaremos el CRUD faltante de los médicos y hospitales, puntualmente seguiremos con los temas de:
+
+1- Modelos
+2- Grabaciones
+3- Queries
+4- Endpoints faltantes
+
+Entre otras cosas, la idea es terminar nuestro backend para empezar a conectarlo con Angular.
+
+					VIDEO 154 ACTUALIZAR HOSPITAL
 
 
