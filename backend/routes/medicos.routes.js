@@ -8,7 +8,7 @@ const {
   actualizarMedico,
   borrarMedico,
 } = require("../controllers/medicos.controller");
-const { check } = require("express-validator");
+const { check,param } = require("express-validator");
 const { validarCampos } = require("../middlewares/validarCampos");
 const { validarToken } = require("../middlewares/validarToken");
 
@@ -25,9 +25,20 @@ router.post("/",
 ], crearMedico);
 
 /* UPDATE HOSPITAL SETTINGS */
-router.put("/:id", [], actualizarMedico);
+router.put("/:id", [
+  validarToken,
+  check("nombre", "El nombre del medico es obligatorio").not().isEmpty(),
+  check("hospital", "El campo hospital es obligatorio").not().isEmpty(),
+  check("hospital", "El id del campo hospital debe ser un mongoId válido").isMongoId(),
+  param("id","Debe ser un id válido").isMongoId(),
+  validarCampos
+], actualizarMedico);
 
 /* DELETE HOSPITAL */
-router.delete("/:id", borrarMedico );
+router.delete("/:id",[
+  validarToken,
+  param("id", "El id del medico debe ser un mongoId válido").isMongoId(),
+  validarCampos
+], borrarMedico );
 
 module.exports = router;

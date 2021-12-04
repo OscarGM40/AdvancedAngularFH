@@ -10,7 +10,7 @@ const MedicoSchema = new mongoose.Schema(
       ref: "Usuario",
     },
     hospital: {
-      required: true,
+      required: false,
       type: mongoose.Schema.Types.ObjectId,
       ref: "Hospital",
     },

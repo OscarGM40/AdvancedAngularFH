@@ -952,4 +952,49 @@ Entre otras cosas, la idea es terminar nuestro backend para empezar a conectarlo
 
 					VIDEO 154 ACTUALIZAR HOSPITAL
 
+Primero que nada creo el endpoint para el renew token.Sencillo:
+
+exports.renewToken = async (req = request, res = response) => {
+  const uid = req.uid;
+
+  const token = await generarJWT(uid);
+
+  res.json({
+    ok: true,
+    token,
+  });
+}
+ 
+Volviendo a los hospitales y médicos solo tenemos el GET y POSt,pero no hemos programado la actualización ni borrado de ambos Modelos.
+
+Para actualizar un hospital vamos a coger cualquier cambio que venga y además volver a fijar el usuario que hace el cambio(fijate que podría separar quién crea el hospital y quién lo actualizó por último.
+
+    const cambiosHospital = {
+      ...req.body,
+      usuario: req.uid,
+    }
+
+    const hospitalActualizado = await Hospital.findByIdAndUpdate(uid, cambiosHospital, { new: true });
+
+NOTA.sobre el x-www-form-urlencoded y el raw, con las últimas actualizaciones de express hacerlo en raw es más sencillo, pero al final el cómo quieras enviar tus datos es decisión tuya, ya que todas las opciones son válidas
+
+				VIDEO 155 ELIMINAR HOSPITAL
+
+NOTA: express-validator puede chequear el body,las cookies,los headers,los params y los queryParams opcionales.
+Su método check valida en uno de los 5,pero puedo ser más especifico y usar el suyo:
+body([fields,message]) para el req.body
+cookie([fields,message]) para mirar sólo en las cookies
+header([fields,message]) para mirar solo en los headers
+param([fields,message]) para mirar sólo en los params obligatorios
+query([fields,message]) para mirar solo en los queryParams opcionales
+checkSchema(schema) <- para validar el schema que se le pasa por argumento
+
+De nuevo puedo usar check([fields,message]) para mirar en cualquier opción.
+
+ASi pues puedo validar que en el param("id") me venga un mongoId.Genial.
+NOTA:fijate que no es buena idea borrar un hospital.Sería mejor desactivarlo,y en caso de borrar el hospital,hay que mirar las relaciones que tenga
+
+Por último,crear una tag-release.
+
+
 

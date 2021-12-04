@@ -9,7 +9,7 @@ const {
   borrarHospital,
 } = require("../controllers/hospitales.controller");
 
-const { check } = require("express-validator");
+const { check,param,header } = require("express-validator");
 const { validarCampos } = require("../middlewares/validarCampos");
 const { validarToken } = require("../middlewares/validarToken");
 
@@ -27,9 +27,19 @@ router.post("/",
 );
 
 /* UPDATE HOSPITAL SETTINGS */
-router.put("/:id", [], actualizarHospital);
+router.put("/:id", [
+  validarToken,
+  check("nombre", "El nombre del hospital es obligatorio").not().isEmpty(),
+  param("id","Debe ser un id válido").isMongoId(),
+  validarCampos,
+], actualizarHospital);
 
 /* DELETE HOSPITAL */
-router.delete("/:id", borrarHospital);
+router.delete("/:id",[
+  validarToken,
+  param("id","Debe ser un id válido").isMongoId(),
+  header("x-token", "Debe enviar un token en el header").not().isEmpty(),
+  validarCampos,
+], borrarHospital);
 
 module.exports = router;

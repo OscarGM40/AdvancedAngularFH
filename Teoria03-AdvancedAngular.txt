@@ -1,0 +1,15 @@
+			SECCION 14 IMPLEMENTAR EL LOGIN Y REGISTRO EN EL FRONTEND
+
+Esta sección tiene por objetivo implementar la seguridad de nuestra aplicación:
+
+1- Conectar el Front-end con el Back-end (login)
+2- Usar Sweet Alert para mostrar mensajes
+3- Login normal de usuario
+4- Login de Google
+5- LocalStorage para almacenar tokens
+6- Protección básica de rutas
+7- Logout
+
+Al finalizar, tendremos los respectivos commits en nuestro repositorio local y en GitHub.
+
+
