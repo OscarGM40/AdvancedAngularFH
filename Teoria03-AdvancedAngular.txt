@@ -126,4 +126,196 @@ Este tipo de funciones tienen que setear los errores del form o a true o a null 
 
 			VIDEO 167 USUARIOSERVICE - CREAR USUARIOS
 
+Fijate que es un buen momento para tipar el formulario con una interfaz:
+export interface RegisterForm {
+  nombre: string;
+  email: string;
+  password: string;
+  password2: string;
+  terminos: boolean;
+}
+  
+REcuerda que nada debería ir sin tipo en TS.El servicio a crear es sencillo
+
+  crearUsuario(formData:RegisterForm){
+    return this.http.post(`${base_url}/usuarios`, formData);
+  }
+
+NOTA: fijate que hemos usado una interfaz porque no necesito un modelo/clase ya que no necesito sus ventajas, con el tipado me vale,y asi no compilo a nada con la interfaz,con una clase ocuparé bytes.
+
+En cuanto a la subscription parece que pide un observer desde Angular 12:
+  this.usuarioService.crearUsuario(this.registerForm.value)
+      .subscribe({
+        next: (response) => {
+          console.log(response);
+        },
+        error: (err) => {
+          console.log(err);
+          Swal.fire('Error', err.error.msg, 'error');
+        }, 
+        complete: () => {
+          console.log('Usuario creado satisfactoriamente!');
+        }
+      })
+  }
+
+						VIDEO 169 LOGIN
+
+Recuerda que para enlazar una clase con un formulario necesito la etiqueta [formGroup]="instancia",en este caso usaré [formGroup]="loginForm".
+Despues cada campo usará un [formGroupName] que sustituye al name y se enlaza con cada propiedad de esa instancia.
+Adicionalmente también necesitaré una función en el (ngSubmit),así que son dos cosas.
+
+* El form es muy sencillo
+  public loginForm = this.fb.group({
+    email: ['test@test.com', [Validators.required, Validators.email, Validators.pattern('[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,3}$')]],
+    password: ['', [Validators.required, Validators.minLength(6)]],
+    remember: [false, ],
+  });
+  
+Me creo su interface para el tipado(de nuevo recuerda que aparte que hay que tipar todo realmente no me importa definir x interfaces,no van a compilar a nada)
+
+  login(){ 
+    this.usuarioService.login(this.loginForm.value)
+    .subscribe({
+      next: (res) => {
+        console.log(res);
+      },
+      error: (err) => {
+        Swal.fire('Error', err.error.msg, 'error');
+      },
+      complete: () => {
+        this.formSubmitted = false;
+        this.router.navigate(['/']);
+        // window.open( '/dashboard', '_self' );
+      }
+    });
+  }
+Creo el servicio y lo llamo,etc...
+NOTA:puedo usar ngModel cuando voy a usar un formulario simple,usando simplemente ngModel en cada campo,pero en cuanto quiera usar validaciones,restricciones y el formulario sea un poco complejo debo usar esta aproximación con formularios reactivos.
+
+				VIDEO 170 GUARDAR INFORMACIÓN EN EL LOCALSTORAGE
+
+El localStorage es un lugar persistente,pero aún asi no es del todo fiable al 100%.Sin embargo,aún asi es el lugar ideal para guardar el token(que es una forma de guardar información del usuario).
+También se puede usars la sessionStorage,sólo que cuando se cierre el browser esta información se borra.
+
+Para realizar este paso lo puedo hacer con el operador 'tap'.El operador tap simplemente vale para realizar un efecto secundario,para adicionar un paso más a la lógica sin mutar nada.Es ideal para realizar esta función de guardado.
+
+NOTA:fijate que en cuanto uso HttpClientModule estoy con Observables y que esto:
+  login(formData:LoginForm):Observable<Object>{
+    return this.http.post(`${base_url}/login`, formData);
+  }
+Es un Observable(al que luego me subscribiré,luego nada me impide mutar la respuesta o concatenarle un efecto o paso con tap:
+
+ crearUsuario(formData:RegisterForm):Observable<Object>{
+    return this.http.post(`${base_url}/usuarios`, formData)
+    .pipe(
+      tap( (resp:any) => {
+        localStorage.setItem('token', resp.token);
+      })
+    );
+  }
+Y recuerda que no necesito darle el tipo de retorno,lo va a inferir TS si es declaración más asignación de la lógica.
+IMPORTANTE:yo sólo puedo guardar strings en el localStorage,pero el token ya es un string,asi que no tengo que parsearlo.
+
+					VIDEO 171 FUNCIONALIDAD DEL REMEMBER-ME
+
+ Realmente es bastante sencillo,si el checkbox está activado es que quiere recordar el email,asi que lo guardo en el localStorage:
+
+En un primer submit exitoso le guardo la contraseña
+
+        if(this.loginForm.get('remember')!.value){
+          localStorage.setItem('email', this.loginForm.get('email')!.value);
+        }else{
+          localStorage.removeItem('email');
+        }
+
+Despues el campo le asigno el valor si lo tiene guardado:
+ email: [localStorage.getItem('email') || '',
+
+Fijate que usando la misma estrategia puedo guardar aparte de su email,el rememberMe sobre el email(creo que tengo que hacerlo,si no lo limpio).
+
+NOTA: Implementarlo en mi app. 
+
+NOTA:al final hay que dar persistencia al checkbox también!:
+      if(this.loginForm.get('remember')!.value){
+          localStorage.setItem('email', this.loginForm.get('email')!.value);
+          localStorage.setItem('remember', this.loginForm.get('remember')!.value);
+        }else{
+          localStorage.removeItem('email');
+          localStorage.removeItem('remember');
+        }
+
+	VIDEO 173 OBTENER EL TOKEN DE AUTENTICACIÓN DE GOOGLE-SIGNIN-API
+
+Si bien podría seguir con el botón de la aplicación vamos a usar el oficial:
+https://developers.google.com/identity/sign-in/web/build-button
+
+NOTA:tengo que copiar todo del ejemplo,incluso las etiquetas <meta>:
+ <meta name="google-signin-client_id" content="YOUR_CLIENT_ID.apps.googleusercontent.com"> <-  tengo que copiar TODO
+Aparte tendré que sustituir YOUR_CLIENT_ID por mi IDpúblico.
+
+Y me pide otro script:
+<script src="https://apis.google.com/js/platform.js?onload=renderButton" async defer></script>
+
+Sin embargo ese ?onload me va a dar problemas(porqué??) asi que lo quito:
+<script src="https://apis.google.com/js/platform.js" async defer></script>
+
+IMPORTANTE: fijate que este script tiene toda la pinta que me va a dar acceso a la variable global 'gapi' de los siguientess scripts.En un simple index.html tendría acceso a él,pero desde un framework como Angular o React necesito pasar esa variable al framework,se hace simplemente declarandola:
+
+declare const gapi:any; <- el framework la va a buscar en los scripts del index.html donde está embebido el <div id="root">
+
+ onSuccess(googleUser:any) {
+    console.log('Logged in as: ' + googleUser.getBasicProfile().getName());
+  }
+
+  onFailure(error:any) {
+    console.log(error);
+  }
+
+  renderButton() {
+    gapi.signin2.render('my-signin2', {
+      'scope': 'profile email',
+      'width': 240,
+      'height': 50,
+      'longtitle': true,
+      'theme': 'dark',
+      'onsuccess': this.onSuccess,
+      'onfailure': this.onFailure
+    });
+  }
+
+Por último este div pintará el botón:
+   <!-- boton Oficial Google -->
+   <div id="my-signin2"></div>
+
+Fijate que el script que ellos me proporcionaban no me asegura que el componente LoginComponent se haya cargado tanto su HTML como su DOM y ya esta llamando a la función renderButton.Esto debo corregirlo,valdría para un index.html con su js,pero no para un framework:
+  <script src="https://apis.google.com/js/platform.js?onload=renderButton" async defer></script>
+
+EL onInit si me asegura que ejecuta algo DESPUES DE QUE SE HAYA CARGADO EL COMPONENTE(de echo inmediatamente despues)
+
+ ngOnInit(): void {
+    this.renderButton();
+  }
+Perfecto.Fijate que useEffect y useLayoutEffect son su contrapartida en React.
+
+Fijate que ha sido muy sencillo,importante entender como puedo pasar variables globales de un script al framework.
+
+Por último,tengo que agregar localhost:4200 a los origenes autorizados en google.developer.console pues sólo hemos agregado el server
+Y para obtener el token,en el onSuccess:
+ const id_token = googleUser.getAuthResponse().id_token;
+ console.log(id_token);
+
+Si diera error de que gapi no está definido quitar la carga asíncrona
+ <script src="https://apis.google.com/js/platform.js" async defer></script>
+
+Cambiarlo por un script normal,obligatorio y síncrono
+ <script src="https://apis.google.com/js/platform.js"></script>
+
+			VIDEO 174 USAR EL TOKEN DE GOOGLE PARA AUTENTICARNOS
+
+NOTA.puedo desconectar,para que vuelva a aparecer el popup con:
+revokeAllScopes() {
+    gapi.auth2.getAuthInstance().disconnect();
+  }
+
 
