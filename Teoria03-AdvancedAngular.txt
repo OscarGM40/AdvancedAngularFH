@@ -12,4 +12,118 @@ Esta sección tiene por objetivo implementar la seguridad de nuestra aplicación
 
 Al finalizar, tendremos los respectivos commits en nuestro repositorio local y en GitHub.
 
+					VIDEO 162 CREANDO UN MODELO DE USUARIO
+
+En el proyecto de Angular tengo que crear los modelos de los objetos con los que trabajaré.Empecemos con el Usuario.Será una clase porque es más funcional que una interface:
+export class Usuario{
+  constructor(
+    public nombre: string,
+    public email: string,
+    public password?: string,
+    public img?: string,
+    public google?: boolean,
+    public role?: string,
+    public uid?: string,
+  ){}
+}
+Las propiedades opcionales van al final.Usamos la forma corta.Fijate que una interfaz daría el tipado pero poco más.Con una clase puedo heredar e inicializar cualquier propiedad a un valor al crear la instancia.
+
+			VIDEO 163 FORMULARIO DE REGISTRO-REACTIVE FORMS
+
+Tenemos que trabajar con el formulario del LoginComponent.Usaremos formularios reactivos.
+Antes que nada recuerda que en Angular hay que cambiar el atributo href por routerLink para usar el enrutador del framework:
+*En Angular tampoco se usa href,igual que en React
+<a routerLink="/register" 
+Lo mismo para ir al login desde el registerComponent
+<a routerLink="/login"
+
+Vamos a trabajar con formularios reactivos así que en el módulo donde estén los componentes para la auth lo requiero 
+
+NOTA:fijate que cuando inyecto una clase  en Angular se supone que es un error de sintaxis y no da autocompletado:
+
+public registerForm = this.fb.group({ <- no veo a group()
+    firstName: [''],
+  }) 
+  
+constructor(private fb: FormBuilder) { }
+
+Con todo lo anterior en mente enlazo clase y formulario:
+ public registerForm = this.fb.group({
+    nombre: ['Oscar',[Validators.required, Validators.minLength(2)]],
+    email: ['test01@test.com',[Validators.required, Validators.email]],
+    password: ['123456',[Validators.required, Validators.minLength(6)]],
+    password2: ['123456',[Validators.required, Validators.minLength(6)]],
+    terminos: [false, Validators.required],
+  }) 
+
+En la template hay que enlazar esta instancia:
+  (ngSubmit)="crearUsuario()"
+   autoComplete="off"
+  [formGroup]="registerForm"
+
+Aparte de ir por cada campo:
+    <input
+      id="checkbox-signup" 
+      type="checkbox"
+      formControlName="terminos"
+   >
+
+				VIDEO 164 VALIDACIONES GENERALES
+
+ Vamos a crear algo sencillo.Con un ngIf mostramos un simple <p> con el error para cada campo:
+   <div class="row">
+     <div class="col text-danger">
+        <p *ngIf="campoNoValido('nombre')">El nombre es obligatorio</p>
+        <p *ngIf="campoNoValido('email')">El email es obligatorio</p>
+        <p *ngIf="registerForm.get('terminos')!.value">Debe de aceptar los términos de uso</p>
+      </div>
+  </div>
+
+Al final cambiamos ese registerForm.get('terminos')!.value
+  aceptaTerminos(): boolean{
+    return this.registerForm.get('terminos')!.value && this.formSubmitted;
+  }
+REcuerda que hay varias formas de acceder a controles de formulario.
+
+					VIDEO 165 VALIDAR CONTRASEÑAS 
+
+Fijate que hemos usado dos contraseñas.Deberían ser iguales,y esto lo podemos validar ya antes de mandar el formulario.
+
+NOTA: fijate que debo esperar siempre a que se postee el formulario para mostrar los errores:
+  contrasenasNoCoinciden(): boolean{
+    const pass1 = this.registerForm.get('password')!.value;
+    const pass2 = this.registerForm.get('password2')!.value;
+    return (pass1 != pass2) && this.formSubmitted;
+  }
+  
+Sin embargo,debo tener en cuenta que este método no va a cambiar la validez del formulario(el form.valid seguirá siendo true).
+Asi que si realmente quiero que una funcionalidad mía cambie el valid | invalid de un form debo crear una función validadora:
+
+   ...  
+  terminos: [false, Validators.required],
+  },{
+    /* como segundo argumento puedo pasar validadores mios con la propiedad validators,que cambiarán el estado del formulario,ojo */
+    validators: this.passwordsIguales('password', 'password2')
+  }) 
+Esto se hace en un segundo argumento que es un object con opciones.Hay que pasarle una funcion validadora custom:
+
+/* impl de la funcion validadora.Debe ser una funcion que retorne otra funcion,la cual será ejecutada */
+passwordsIguales(pass1: string, pass2: string){
+    return (formGroup: FormGroup) => {
+      /* son los controles enteros */
+      const pass1Control = formGroup.get(pass1);
+      const pass2Control = formGroup.get(pass2);
+      if(pass1Control!.value === pass2Control!.value){
+        // puedo retornar el error en cualquier campo del formulario
+        pass2Control!.setErrors(null);
+      }else{
+        pass2Control!.setErrors({noCoincide: true});
+      }
+    }
+  }
+
+Este tipo de funciones tienen que setear los errores del form o a true o a null para cuando pase.Realmente es bastante sencillo todo.
+
+			VIDEO 167 USUARIOSERVICE - CREAR USUARIOS
+
 
