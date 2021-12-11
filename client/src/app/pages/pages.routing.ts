@@ -1,7 +1,9 @@
 
-
 import { Routes, RouterModule } from '@angular/router';
 import { NgModule } from '@angular/core';
+
+import { AuthGuard } from '../guards/auth.guard';
+
 import { PagesComponent } from './pages.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { Grafica1Component } from './grafica1/grafica1.component';
@@ -12,41 +14,44 @@ import { RxjsComponent } from './rxjs/rxjs.component';
 
 
 
-const routes: Routes = [{
-   path: 'dashboard', component: PagesComponent,
-   children: [
-      {
-         path: '', component: DashboardComponent, data: {
-            title: 'Dashboard',
-         }
-      },
-      {
-         path: 'progress', component: ProgressComponent, data: {
-            title: 'Gráfica ProgressBar',
-         }
-      },
-      {
-         path: 'grafica-dona', component: Grafica1Component, data: {
-            title: 'Gráfica Dona | Donought',
-         }
-      },
-      {
-         path: 'account-settings', component: AccountSettingsComponent, data: {
-            title: 'Ajustes de Tema',
-         }
-      },
-      {
-         path: 'promesas', component: PromesasComponent, data: {
-            title: 'Promesas Custom',
-         }
-      },
-      {
-         path: 'rxjs', component: RxjsComponent, data: {
-            title: 'Operadores RxJs Y Observables Custom',
+const routes: Routes = [
+   {
+      path: 'dashboard',
+      component: PagesComponent,
+      canActivate: [AuthGuard],
+      children: [
+         {
+            path: '', component: DashboardComponent, data: {
+               title: 'Dashboard',
+            }
          },
-      }
-   ]
-}];
+         {
+            path: 'progress', component: ProgressComponent, data: {
+               title: 'Gráfica ProgressBar',
+            }
+         },
+         {
+            path: 'grafica-dona', component: Grafica1Component, data: {
+               title: 'Gráfica Dona | Donought',
+            }
+         },
+         {
+            path: 'account-settings', component: AccountSettingsComponent, data: {
+               title: 'Ajustes de Tema',
+            }
+         },
+         {
+            path: 'promesas', component: PromesasComponent, data: {
+               title: 'Promesas Custom',
+            }
+         },
+         {
+            path: 'rxjs', component: RxjsComponent, data: {
+               title: 'Operadores RxJs Y Observables Custom',
+            },
+         }
+      ]
+   }];
 
 @NgModule({
    imports: [RouterModule.forChild(routes)],

@@ -313,9 +313,186 @@ Cambiarlo por un script normal,obligatorio y síncrono
 
 			VIDEO 174 USAR EL TOKEN DE GOOGLE PARA AUTENTICARNOS
 
-NOTA.puedo desconectar,para que vuelva a aparecer el popup con:
-revokeAllScopes() {
-    gapi.auth2.getAuthInstance().disconnect();
+Realmente es bastante fácil el servicio,simplemente va a llamar al backend con el token en cuanto lo tengamos de Google Sign In:
+
+  loginGoogle(token:string){
+    return this.http.post(`${base_url}/login/google`, {token})
+    .pipe(
+      tap( (resp:any) => {
+        localStorage.setItem('token', resp.token);
+      })
+    );
   }
+
+NOTA: la solución para que siempre me dé el popup para elegir cuentas es llamar al disconnect de esta API tras logearme,para no seguir logeados eternamente:
+ attachSignin(element:any) {
+    
+  this.auth2.attachClickHandler(element, {},
+     (googleUser:any) =>{
+     const id_token = googleUser.getAuthResponse().id_token;
+     console.log('Logged in as: ' + googleUser.getBasicProfile().getId());
+     // Aqui ya tengo el token de google
+      this.usuarioService.loginGoogle(id_token)
+        .subscribe(() => {
+        // this.router.navigate(['/']);
+        this.auth2.disconnect();
+        }
+      );
+
+ESte login está perfecto,voy a tener que cambiar el mío de Firebase por éste.Poco a poco.
+
+				VIDEO 175 PROTEGER RUTAS DE MI APLICACIÓN
+
+TEnemos que bloquear el /dashboard y sólo dejar pasar con un token válido.Lo haremos con un Guard:
+ng g guard guards/auth --skip-tests <- y activo canActivate
+
+Para usarlo hay que usarlo con la propiedad canActivate dentro de la instancia:Routes:
+
+const routes: Routes = [
+{ 
+  path:'dashboard',
+  component: PagesComponent,
+  canActivate: [AuthGuard],
+  children:[...]
+}
+En este caso como encima tiene varias rutas hijas protegemos a todas.Siempre va a proteger a esa ruta en concreto donde lo ponga o a ella+sus hijas.Genial.
+
+Ya tengo una función que me permite ejecutar lógica en base a rutas,lógicamente tengo que retornar false si el token no existe o no es válido.
+
+Y para comprobar el token ya tenemos un endpoint(el renew) que comprueba y además renueva,pero también comprueba,ojo.
+
+* Podemos creaer un servicio como existe
+  validarToken(){
+    const token = localStorage.getItem('token') || '';
+
+    return this.http.get(`${base_url}/login/renew`, 
+    {
+      headers: {
+        'x-token': token,
+      }
+    }).pipe(
+        tap((resp: any) => 
+        {
+          localStorage.setItem('token', resp.token);
+        }),
+        map( (resp: any) => {
+          return resp.ok;
+        }));
+  }
+* O también podría hacer la petición y en el guard retornar la resp.ok.Sea como sea está claro que tengo en esa propiedad ok el boolean para activar o no la ruta
+
+  canActivate(
+    route: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot) {
+      return this.usuarioService.validarToken();
+  }
+
+IMPORTANTE: fijate que NO TENGO QUE DISPARAR EL OBSERVABLE!! Ya lo hará Angular cada vez que se intente entrar a esa ruta o rutas.Increíble
+NOTA:fijate que si el Guard arroja un false el usuario se va a quedar en esa pantalla en blanco,sin poder hacer nada.TEngo que redireccionarle al login,por ejemplo.
+
+Y para hacer esto inyecto el Router y fijate como el Guard tiene un Observable,asi que puedo usar pipe y con tap ver la respuesta:
+
+    return this.usuarioService.validarToken()
+      .pipe( tap(estaAutenticado => {
+        if (!estaAutenticado) {
+          this.router.navigateByUrl('/login');
+        }
+      }));
+
+Añun faltaría manejar el error(ese 401 que nos dará un token caducado).De nuevo podemos hacerlo de varias formas,pero mejor usamos el operador rxjs catchError:
+	return ...(pipe( tap... map...).
+     catchError(err => {
+          return of(false);
+        }));
+
+Fijate que yo tengo que retornar un Observable<boolean> asi que qué mejor que retrnar un of(false).Pero que grande es este cabrón.
+Y por último redirecciono en el login | loginGoogle y el register inyectando Router:
+ this.router.navigateByUrl('/'); | this.router.navigate(['/']);
+
+					VIDEO 176 LOGOUT
+
+De alguna manera queremos borrar el token del localStorage y además hacer el sign out de Google,todo esto en nuestro logout.
+Empecemos por algo fácil,creando este servicio:
+
+  logout() {
+    localStorage.removeItem('token');
+    
+    this.auth2.signOut().then(() => {
+      this.router.navigate(['/login']);
+    });
+Y lo llamo en el headerComponent y el sidebarComponent.Sin embargo,veo que tengo problemas,como no ver el botón o éste:
+
+core.js:28064 Navigation triggered outside Angular zone, did you forget to call 'ngZone.run()'?
+
+Este error suele ser que he navegado usando alguna librería de terceros,sin usar el router de Angular.Es sólo un warning,pero efectivamente el problema está aquí: 
+Efectivamente,la librería externa tiene dentro un router.navigate.
+ this.auth2.signOut().then(() => {
+      this.router.navigate(['/login']);
+
+El warning es fácil de quitar,hay que inyectar NgZone,y usar su router:
+
+constructor(
+    private http: HttpClient,
+    private router: Router,
+    private ngZone: NgZone <- me traigo a NgZone
+    });
+
+Y que sea él el que rutee:
+  this.auth2.signOut().then(() => {
+      this.ngZone.run(() => {
+      this.router.navigate(['/login']);
+      });
+    });
+De echo,también tenemos un error al entrar,y es porque al entrar también estaba la librería manejando el ruteo:
+
+Asi que en el loginComponent tmb usamos ngZone
+   this.usuarioService.loginGoogle(id_token)
+          .subscribe(() => {
+            this.ngZone.run(() => {
+            this.router.navigate(['/']);
+            // this.auth2.disconnect();
+            });
+
+Si bien estaba funcionando la redirección Angular pierde por unos instantes el control sobre el ciclo de vida y es por esto que no se inicializan algunas funciones u otras cosas.
+
+				VIDEO 177 OPTIMIZACION DEL AUTHINIT DE GOOGLE
+
+Dado que hemos duplicado algo de código en la función que inicia la gapi mejor refactorizamos.Usaremos una Promesa,¿por qué?,porque a diferencia de los Observables se disparan sólas,no hace falta que nadie este escuchando:
+
+   return new Promise(resolve => {
+    console.log('init') <- esta Promise se dispara sola.
+
+ASi que puedo compartir cualquier código metiendolo en una Promesa:
+googleInit(){
+    return new Promise(resolve => {
+      gapi.load('auth2', () => {
+        this.auth2 = gapi.auth2.init({
+          client_id: '139109903112-ingc2d6nd9a88erptsdbglpsaonrrumm.apps.googleusercontent.com',
+          cookiepolicy: 'single_host_origin',
+        });
+        resolve(this.auth2);
+      });
+    });
+  }
+Podía haberla echo void también,pero no es importante.Sea como sea ahora en vez de duplicar la inicialización llamo a la promesa que la inicia y me la devuelve:
+
+  async startApp() {
+      this.auth2 = await this.usuarioService.googleInit();
+      this.attachSignin(document.getElementById('my-signin2'));
+    }
+Claro está ,hay que usar async/await y una variable local para almacenar a gapi.
+
+			SECCION 15 PERFIL DE USUARIO,PIPES Y CARGA DE ARCHIVOS
+
+Esta sección se enfoca en varios temas relacionados al perfil del usuario:
+
+1- Módulo de pipes 
+2- Pipe para controlar la imagen a desplegar
+3- Subida de imagen desde el Front-end hasta el Back-end
+4- Crear el componente del perfil del usuario
+5- Notificar actualización de imagen
+6- Vista previa de la imagen seleccionada en tiempo real (sin subirla al backend)
+
+Al finalizar, siempre haremos la creación del release tag en nuestro repositorio local y remoto
 
 

@@ -25,7 +25,7 @@ export class BreadcrumbsComponent implements OnInit, OnDestroy{
   }
   ngOnDestroy(): void {
     this.titleSub$.unsubscribe();
-    console.log('Cancelada subscripcion a this.router.events')
+    // console.log('Cancelada subscripcion a this.router.events')
   }
 
   getDataThroughRoute() {
