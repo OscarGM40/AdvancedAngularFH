@@ -84,8 +84,11 @@ exports.renewToken = async (req = request, res = response) => {
 
   const token = await generarJWT(uid);
 
+  const user = await Usuario.findById(uid);
+
   res.json({
     ok: true,
     token,
+    usuario:user,
   });
 }

@@ -76,7 +76,7 @@ exports.retornaImagen = async (req = request, res = response) => {
   if(fs.existsSync(pathImagen)){
     res.sendFile(pathImagen);
   }else {
-    const pathNoImage = path.join(__dirname, "../uploads/no-image.jpg");
+    const pathNoImage = path.join(__dirname, "../uploads/no-img.jpg");
     res.sendFile(pathNoImage);
   }
 }

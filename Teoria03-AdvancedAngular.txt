@@ -495,4 +495,78 @@ Esta sección se enfoca en varios temas relacionados al perfil del usuario:
 
 Al finalizar, siempre haremos la creación del release tag en nuestro repositorio local y remoto
 
+				VIDEO 182 CONTINUACIÓN DEL PROYECTO
+
+Levantamos todo de nuevo y retocamos el endpoint del renew token para que devuelva el user,ya que Fernando lo exige:
+
+ const user = await Usuario.findById(uid);
+
+  res.json({
+    ok: true,
+    token,
+    usuario:user,
+
+		VIDEO 183 CENTRALIZAR LA INFORMACIÓN DEL USUARIO CONECTADO
+
+Queremos tener toda la información del usuario actual centralizada.UN buen punto para hacerlo es en el servicio para el canActivate del Guard.
+
+Sin embargo,tengo que tener en cuenta que debo usar el Modelo que definí en Angular(una clase igual al Modelo del backend) e iniciar una instancia de él.
+No debo hacer this.usuario = resp.data sino crea una instancia.
+
+  const { email,google,nombre,role,img,uid } = resp.usuario;
+  this.usuario = new Usuario(nombre, email, '',img, google,role,uid);
+
+NOTA: puedo bajar el modo estricto de TS para no tener que hacer public usuario!:Usuario; en el tsconfig.json aqui: "strict": true, <- ponerlo a false
+
+			VIDEO 184 MOSTRAR IMAGEN DEL PERFIL DEL USUARIO
+
+Vamos a crear un getter que traiga la imagen.Pan comido:
+
+  get getImagenUrl() {
+    if (this.img.includes('https')) {
+      return this.img;
+    }else if(this.img){
+      return `${ base_url }/upload/usuarios/${ this.img }`;
+    }else{
+      return `${ base_url }/upload/usuarios/no-image`;
+    }
+  }
+FAlta llamar a este getter.Primero vamos al headerComponent.Fijate que en el video anterior metimos el modelo Usuario en una propiedad, asi que podría hacer refeerencia a la propiedad asi:
+
+this.usuarioService.usuario.img pero vamos a usar el getter en el constructor:
+ 
+  constructor(private usuarioService: UsuarioService) { 
+    this.imgUrl = usuarioService.usuario.getImagenUrl;
+  }
+
+IMPORTANTE: el atributo [src]="imgUrl" necesita llaves cuadrada pues apunta a una propiedad de la clase.
+
+Inclusive puedo traerme todo el modelo:
+
+  public imgUrl = "";
+  public usuario: Usuario;
+  
+  constructor(private usuarioService: UsuarioService) { 
+  }
+  
+  ngOnInit(): void {
+    this.imgUrl = this.usuarioService.usuario.getImagenUrl;
+    this.usuario = this.usuarioService.usuario;
+  }
+
+NOTA:fijate que si no existe el campo img por ser un usuario normal y no haber subido foto MongoDB devuelve un undefined y el this.img.includes() de ese undefined rompe la aplicación.La solución es mirar primero por el campo img y despues por si lo incluye o no,no como hice yo de primeras.
+
+				VIDEO 185 OPTIMIZACIONES DEL EMAIL 
+
+IMPORTANTE: fijate que en Angular los dos {{}} sirven para meter código Javascript,no sólo sirven para inferir variables.Asi que vamos a mirar si el email es muy largo lo cortamos con el pipe slice y le contateno una ellipsis:
+
+ <p class="text-muted">
+    {{ usuario.email| slice:0:20 }}
+    {{ (usuario.email.length > 20) ? "..." : "" }}
+ </p>
+NOTAS: fijate que he concatenado dos zonas {{}}{{}}.¿Y porqué no?Puedo concatenar todas las que quiera,y en React también.Y puedo usarlas para un ternario.Genial
+Lo más importante es entender que puedo usar slice:0:20 para recortar cualquier variable fácil en Angular,además de usar ternarios y varios bloques.
+		
+			VIDEO 186 CREAR EL COMPONENTE DEL PERFIL DE USUARIO
+
 

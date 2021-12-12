@@ -11,6 +11,7 @@ import { environment } from '../../environments/environment';
 
 import { LoginForm } from '../interfaces/login-form-interface';
 import { RegisterForm } from '../interfaces/register-form-interface';
+import { Usuario } from '../models/usuario.model';
 
 declare const gapi: any;
 const base_url = environment.base_url;
@@ -21,6 +22,7 @@ const base_url = environment.base_url;
 export class UsuarioService {
 
   public auth2: any;
+  public usuario!:Usuario;
 
   constructor(
     private http: HttpClient,
@@ -67,6 +69,11 @@ export class UsuarioService {
       })
       .pipe(
         tap((resp: any) => {
+          // console.log(resp.usuario)
+          const { email,google,nombre,role,img="",uid } = resp.usuario;
+
+          this.usuario = new Usuario(nombre, email, '',img, google,role,uid);
+          
           localStorage.setItem('token', resp.token);
         }),
         map((resp: any) => {
