@@ -569,4 +569,58 @@ Lo más importante es entender que puedo usar slice:0:20 para recortar cualquier
 		
 			VIDEO 186 CREAR EL COMPONENTE DEL PERFIL DE USUARIO
 
+Creamos un nuevo componente PerfilComponent dentro de pages:
+{
+   path: 'perfil', component: PerfilComponent, data: {
+     title: 'Perfil Usuario',
+  }
+},
+REcuerda que siempre debo señalizar la ruta activa de alguna forma.En Angular es fácil con el atributo routerLinkActive:
+ <li><a routerLink="perfil" routerLinkActive="active">My Profile </a></li>a
+
+NOTA: fijate como puedo seleccionar cualquier elemento en un navegador de una web o un archivo y copiar sólo ese código con inspeccionar y despues copiar elemento.Incluso puedo abrir un file y copiarlo.
+
+Asi que usamos la template y nos traemos un formulario de ella.Fácil.Fijate que tengo bastantes y bien bonitos que podría reusar.
+
+					VIDEO 187 ACTUALIZAR EL PERFIL DE USUARIO
+
+Empecemos poblando el formulario con los valores actuales.Hay que traer al módulo los ReactiveForms,creo la propiedad:FormGroup = this.fb.group({}) y la enlazo a la template en la template con [formGroup]=prop y voy por cada campo con formGroupName= property.Creo una función cualquiera para el submit e imprimo el this.formgroup.value.
+
+Recuerda desactivar botones para una mejor experiencia de usuario.
+[disabled]="perfilForm.invalid"
+
+En cuanto a lo que puedo mandar por el body solo serán el nombre y email,y el role sólo lo podrá cambiar un admin.Creemos el servicio:
+
+   actualizarPerfil(data: { email: string, nombre: string, role: string}): Observable<Object> {
+    data = {
+      ...data,
+      role: this.usuario.role,
+    };
+
+    return this.http.put(`${base_url}/usuarios/${this.uid}`, data, {
+      headers: {
+        'x-token': this.token
+      }
+    });
+  }
+Bien,todo funciona,pero al actualizarPerfil no se actualiza en la app lo que ya esta hasta que se haga un refresh,claro.
+
+				VIDEO 188 ACTUALIZAR PERFIL PARTE DOS
+
+Fijate que vamos a hacer uso de Javascript y su habilidad de pasar todo por referencia.Al realizar la petición simplemente reasigno esa propiedad global que hemos creado en el service que alimenta toda la app con el email,nombre,uid,etc...
+
+  this.usuarioService
+      .actualizarPerfil(this.perfilForm.value)
+      .subscribe( resp => {
+        const { nombre, email } = this.perfilForm.value;
+        this.usuario.nombre = nombre;
+        this.usuario.email = email;
+      });
+
+Realmente se podrían usar varias aproximaciones,como ngRx y Redux o usar un Observable.
+Y ojo,que para que cambie tengo que re-asignar alguna propiedad:
+this.usuario = this.perfilForm.value no tendría efecto tengo que entrar a usuario: this.usuario.name = this.perfilForm.value.name por ejemplo.
+
+				VIDEO 189 SERVICIO DE CARGA DE IMÁGENES
+
 
