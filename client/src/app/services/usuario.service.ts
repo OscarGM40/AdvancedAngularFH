@@ -75,7 +75,7 @@ export class UsuarioService {
       })
       .pipe(
         tap((resp: any) => {
-          console.log(resp.usuario)
+          // console.log(resp.usuario)
           const { email,google,nombre,role,img="",id:uid } = resp.usuario;
 
           this.usuario = new Usuario(nombre, email, '',img, google,role,uid);

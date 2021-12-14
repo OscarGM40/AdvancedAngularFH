@@ -623,4 +623,96 @@ this.usuario = this.perfilForm.value no tendría efecto tengo que entrar a usuar
 
 				VIDEO 189 SERVICIO DE CARGA DE IMÁGENES
 
+Recordemos como es el endpoint,que era api/upload/:coleccion/:id y en el body va el file además del el token por los headers.Como será reusable lo mejor es crear un servicio
+NOTA:Fijate que perfectamente puedo usar async en un método de clase de Angular:
+async actualizarFoto(){}
+
+Fijate que cualquier 'key' de Postman viene por el body:
+
+  async actualizarFoto(
+    archivo:File,
+    tipo: 'usuarios'|'medicos'|'hospitales',
+    id:string
+    ){
+    try {
+
+      const url = `${base_url}/upload/${tipo}/${id}`;
+      const formData = new FormData();
+      formData.append('imagen',archivo); <- req.body.imagen para el server
+
+Realmente no tiene más,ahora hay que hacer la petición:
+
+  const resp = await fetch(url,{
+    method:'PUT',
+    headers:{
+      'x-token':localStorage.getItem('token') || ''
+    },
+    body:formData
+  });
+
+Ahora para rescatar la imagen recuerda que el archivo siempre está en event.target.files[0].En ese event.target.files[0] tendré un obj literal con :
+{
+ name: xxx.jpg <- podría saber la extensión
+ size: 1353 <- un number
+ type: puedo filtrar ya desde el frontend
+}
+NOTA: tuve que cambiar la linea "strictTemplates": false en el tsconfig.json para poder
+
+Entonces,recapitulando,pasos a seguir
+
+1: en la template mando el file del input como argumento
+ <input  type="file" 
+    (change)="cambiarAvatar($event.target.files[0])">
+
+2: lo recogo en ese método y lo meto en una variable en la clase:
+  cambiarAvatar( archivo: File ) {
+    this.imagenSubida = archivo;
+  }
+3: ya puedo hacer el submit de la foto junto con lo necesario:
+<button  type="button" <- puede ser un submit 
+    [disabled]="!imagenSubida"
+    (click)="guardarAvatar()">
+
+Fijate que lo desactivo mientras no haya un file
+
+				VIDEO 190 PREVIA DE LA IMAGEN SELECCIONADA
+
+Debo seguir mejorando la experiencia de usuario ya que aún no se actualiza la imagen.Podemos aprovecharnos de que estamos en JS y cambiar la propiedad this.usuario.img haciendo que el servicio devuelva ese valor:
+
+    if (data.ok) {
+        return data.nombreArchivo;
+      } else {
+        console.log(data.msg);
+        return false;
+      }
+       
+Al llamar al método que llama al servicio ese servicio devolverá lo necesario para cambiar por referencia el objeto de tipo Usuario.Genial.
+ this.fileUploadService
+      .actualizarFoto(this.imagenSubida, 'usuarios', this.usuario.uid)
+      .then( img => {
+        this.usuario.img = img;
+      })
+
+Ahora mostremos la imagen que el usuario está dispuesto a subir.Realmente es muy encillo con la clase FileReader() y una propiedad imagenTemporal:string;.Fijate que hay que pasar a base64 el binario:
+
+/* puedo construir una imagen temporal leyendo un blob,encriptandolo y aplicando al atributo src el resultado */
+const reader = new FileReader();
+/* el método FileReaderInstance.readerAsDataUrl(blob) empieza a leer un Blob y lo pasa a base64-Encoding */
+reader.readAsDataURL(archivo);
+/* con el onloadend sé que ha terminado de cargar */
+ reader.onloadend = () => {
+   this.imagenTemporal = reader.result.toString();
+   this.ref.detectChanges();
+ };  
+
+Para que quede aún mejor puedo usar un ngIf y mostrar o bien la imagen anterior o bien la que quiero subir:
+
+ <div class="img-container">
+   <img *ngIf="!imagenTemporal" [src]="usuario.getImagenUrl" class="img-avatar">
+   <img *ngIf="imagenTemporal" [src]="imagenTemporal" class="img-avatar">
+ </div>
+Genial.Por último no estamos manejando que un usuario quiera actualizar su correo a uno ya existente o que actualize correctamente.Hay que mejorar el feedback.
+
+					VIDEO 191 MENSAJES AL USUARIO 
+
 

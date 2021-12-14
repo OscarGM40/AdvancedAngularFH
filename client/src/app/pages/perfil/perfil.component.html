@@ -5,21 +5,15 @@
       <div class="card-body">
         <h4 class="card-title">Mi perfil de usuario</h4>
         <h6 class="card-subtitle">Ajustes</h6>
-        
-        <form class="form p-t-20" 
-          [formGroup]="perfilForm"
-          (ngSubmit)="actualizarPerfil()">
+
+        <form class="form p-t-20" [formGroup]="perfilForm" (ngSubmit)="actualizarPerfil()">
           <div class="form-group">
             <label for="name">User Name</label>
             <div class="input-group">
               <div class="input-group-addon">
                 <i class="ti-user"></i>
               </div>
-              <input
-                type="text"
-                class="form-control"
-                id="name"
-                formControlName="nombre"
+              <input type="text" class="form-control" id="name" formControlName="nombre"
                 placeholder="Nombre del usuario">
             </div>
           </div>
@@ -27,21 +21,14 @@
             <label for="email">Email address</label>
             <div class="input-group">
               <div class="input-group-addon">
-                 <i class="ti-email"></i>
+                <i class="ti-email"></i>
               </div>
-              <input
-                type="email"
-                class="form-control"
-                id="email"
-                formControlName="email"
-                placeholder="Email">
+              <input type="email" class="form-control" id="email" formControlName="email" placeholder="Email">
             </div>
           </div>
 
           <div class="d-flex align-items-center justify-content-center">
-            <button 
-              type="submit"
-              [disabled]="perfilForm.invalid"
+            <button type="submit" [disabled]="perfilForm.invalid"
               class="btn btn-block  btn-success waves-effect waves-light mr-10 mt-2 w-75 ">
               <i class="fa fa-save"></i>
               Guardar cambios
@@ -58,11 +45,18 @@
       <div class="card-body">
         <h4 class="card-title">Avatar</h4>
         <h6 class="card-subtitle">Imagen del usuario</h6>
-        <img src="" alt="">
-        <input type="file">
+
+        <div class="img-container">
+          <img *ngIf="!imagenTemporal" [src]="usuario.getImagenUrl" class="img-avatar">
+          <img *ngIf="imagenTemporal" [src]="imagenTemporal" class="img-avatar">
+        </div>
+
+        <input type="file" (change)="cambiarAvatar($event.target.files[0])">
 
         <div class="d-flex align-items-center justify-content-center">
-          <button type="button" class="btn btn-block btn-info waves-effect waves-light mr-10 mt-4 w-75">
+          <button type="button" class="btn btn-block btn-info waves-effect waves-light mr-10 mt-4 w-75"
+            [disabled]="!imagenSubida" (click)="guardarAvatar()">
+            >
             <i class="fa fa-save"></i>
             Cambiar Avatar
           </button>
