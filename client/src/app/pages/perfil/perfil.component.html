@@ -23,7 +23,13 @@
               <div class="input-group-addon">
                 <i class="ti-email"></i>
               </div>
-              <input type="email" class="form-control" id="email" formControlName="email" placeholder="Email">
+              <input
+               type="email"
+               class="form-control"
+               id="email"
+               formControlName="email"
+               placeholder="Email"
+               [readonly]="usuario.google">
             </div>
           </div>
 
@@ -56,7 +62,7 @@
         <div class="d-flex align-items-center justify-content-center">
           <button type="button" class="btn btn-block btn-info waves-effect waves-light mr-10 mt-4 w-75"
             [disabled]="!imagenSubida" (click)="guardarAvatar()">
-            >
+            
             <i class="fa fa-save"></i>
             Cambiar Avatar
           </button>

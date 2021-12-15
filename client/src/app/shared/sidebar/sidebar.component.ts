@@ -11,9 +11,8 @@ import { UsuarioService } from 'src/app/services/usuario.service';
 })
 export class SidebarComponent implements OnInit {
 
-  public imgUrl = "";
   public menuItems: any[] ;
-  public usuario: Usuario;
+  public usuario!: Usuario;
 
   constructor(
     private sidebarService: SidebarService,
@@ -25,7 +24,6 @@ export class SidebarComponent implements OnInit {
 
   ngOnInit(): void {
     this.usuario = this.usuarioService.usuario;
-    this.imgUrl = this.usuarioService.usuario.getImagenUrl;
   }
 
 }

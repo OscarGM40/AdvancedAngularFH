@@ -715,4 +715,49 @@ Genial.Por último no estamos manejando que un usuario quiera actualizar su corr
 
 					VIDEO 191 MENSAJES AL USUARIO 
 
+En una edición exitosa doy feedback con Sweetalert2:
+  actualizarPerfil() {
+    this.usuarioService
+      .actualizarPerfil(this.perfilForm.value)
+      .subscribe( () => 
+      {
+        const { nombre, email } = this.perfilForm.value;
+        this.usuario.nombre = nombre;
+        this.usuario.email = email;
 
+        Swal.fire('Guardado', 'Cambios guardados', 'success');
+        this.ref.detectChanges();
+      },
+      (error) => 
+      {
+        console.log(error);
+        Swal.fire('Error', error.error.msg, 'error');
+      });
+
+Fijate que al final he tenido que cambiar el código un poco:
+
+En cada template simplemente llamo al getter
+<img [src]="usuario.getImagenUrl"
+Y nada más.Falta bloquear que un usuario de Google pueda cambiar su avatar.
+
+				VIDEO 192 BLOQUEAR USUARIO DE GOOGLE
+
+Un usuario de Google no puede cambiar su email ni nombre,dado que siempre será el mismo.Fijate que tengo que controlarlo tanto en el frontend como en el backend.De echo en el back es super-importante hacerlo,pues el front podría saltarse.
+En el frontend es bastante sencillo esto.
+
+Fijate como usa la propiedad readonly de HTML con un condicional:
+<input type="email"...
+  [readonly]="usuario.google">
+
+NOTA:la propiedad readonly es para un input como un disabled para un button,deshabilitando por completo la edición de ese campo.Genial.
+
+En el backend es también igual de sencillo.Antes estabamos dejando actualizar cualquier email,ahora simplemente miro si es un usuario de Google:
+
+if(usuarioDB.google === false) {
+        usuarioDB.email = email;
+        } else {
+          return res.status(400).json({
+            ok: false,
+            msg: "No puedes cambiar el correo de un usuario de google",
+          });
+        }

@@ -86,11 +86,19 @@ exports.actualizarUsuario = async (req = request, res = response) => {
 
     
     usuarioDB.nombre = nombre;
+
     if (usuarioDB.email !== email) {
       const existeEmail = await Usuario.findOne({ email });
       
       if(!existeEmail) {
+        if(usuarioDB.google === false) {
         usuarioDB.email = email;
+        } else {
+          return res.status(400).json({
+            ok: false,
+            msg: "No puedes cambiar el correo de un usuario de google",
+          });
+        }
       }else{
         return res.status(400).json({
           ok: false,

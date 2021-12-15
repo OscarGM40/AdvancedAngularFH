@@ -100,7 +100,7 @@ export class UsuarioService {
       );
   }
 
-  actualizarPerfil(data: { email: string, nombre: string, role: string}): Observable<Object> {
+  actualizarPerfil(data: { email: string, nombre: string, role?: string}): Observable<Object> {
     data = {
       ...data,
       role: this.usuario.role,
