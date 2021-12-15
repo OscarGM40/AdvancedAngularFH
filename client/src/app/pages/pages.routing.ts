@@ -4,14 +4,16 @@ import { NgModule } from '@angular/core';
 
 import { AuthGuard } from '../guards/auth.guard';
 
-import { PagesComponent } from './pages.component';
-import { DashboardComponent } from './dashboard/dashboard.component';
-import { Grafica1Component } from './grafica1/grafica1.component';
-import { ProgressComponent } from './progress/progress.component';
 import { AccountSettingsComponent } from './account-settings/account-settings.component';
-import { PromesasComponent } from './promesas/promesas.component';
-import { RxjsComponent } from './rxjs/rxjs.component';
+import { DashboardComponent } from './dashboard/dashboard.component';
+import { PagesComponent } from './pages.component';
+import { Grafica1Component } from './grafica1/grafica1.component';
 import { PerfilComponent } from './perfil/perfil.component';
+import { ProgressComponent } from './progress/progress.component';
+import { PromesasComponent } from './promesas/promesas.component';
+
+import { RxjsComponent } from './rxjs/rxjs.component';
+import { UsuariosComponent } from './mantenimientos/usuarios/usuarios.component';
 
 
 
@@ -29,11 +31,6 @@ const routes: Routes = [
          {
             path: 'progress', component: ProgressComponent, data: {
                title: 'Gráfica ProgressBar',
-            }
-         },
-         {
-            path: 'perfil', component: PerfilComponent, data: {
-               title: 'Perfil Usuario',
             }
          },
          {
@@ -55,7 +52,14 @@ const routes: Routes = [
             path: 'rxjs', component: RxjsComponent, data: {
                title: 'Operadores RxJs Y Observables Custom',
             },
-         }
+         },
+         {
+            path: 'perfil', component: PerfilComponent, data: {
+               title: 'Perfil Usuario',
+            }
+         },
+         /* mantenimientos === CRUD por colección */
+         { path:'usuarios', component: UsuariosComponent, data: { title: 'Usuarios de aplicaciòn' } },
       ]
    }];
 

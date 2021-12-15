@@ -5,12 +5,13 @@ import { Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
+import { CargarUsuario } from '../interfaces/cargar-usuarios.interface';
 
 
 
 
-import { LoginForm } from '../interfaces/login-form-interface';
-import { RegisterForm } from '../interfaces/register-form-interface';
+import { LoginForm } from '../interfaces/login-form.interface';
+import { RegisterForm } from '../interfaces/register-form.interface';
 import { Usuario } from '../models/usuario.model';
 
 declare const gapi: any;
@@ -36,6 +37,14 @@ export class UsuarioService {
 
   get uid(): string {
     return this.usuario.uid || '';
+  }
+
+  get headers() {
+    return {
+      headers: {
+        'x-token': this.token
+      }
+    }
   }
 
   googleInit() {
@@ -67,12 +76,7 @@ export class UsuarioService {
 
   validarToken(): Observable<boolean> {
 
-    return this.http.get(`${base_url}/login/renew`,
-      {
-        headers: {
-          'x-token': this.token,
-        }
-      })
+    return this.http.get(`${base_url}/login/renew`,this.headers)
       .pipe(
         tap((resp: any) => {
           // console.log(resp.usuario)
@@ -106,11 +110,7 @@ export class UsuarioService {
       role: this.usuario.role,
     };
 
-    return this.http.put(`${base_url}/usuarios/${this.uid}`, data, {
-      headers: {
-        'x-token': this.token
-      }
-    });
+    return this.http.put(`${base_url}/usuarios/${this.uid}`, data, this.headers);
   }
 
   login(formData: LoginForm) {
@@ -130,4 +130,9 @@ export class UsuarioService {
         })
       );
   }
+
+  cargarUsuarios(desde: number = 0) {
+    return this.http.get<CargarUsuario>(`${base_url}/usuarios?desde=${desde}`, this.headers);
+  }
+  
 }

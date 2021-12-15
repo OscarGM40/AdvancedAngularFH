@@ -1,0 +1,98 @@
+		SECCION 16 MANTENIMIENTO DE USUARIOS Y MODAL DE CARGA DE IMÁGENES
+
+En esta sección veremos como mantener los usuarios.Implementaremos paginación,haremos busquedás,podremos cambiar el role,el nombre,crear usuarios,editarlos,borrarlos,..
+Básicamentes será crear un CRUD por cada colección.Fernando me dará un consejo sobre como crear un cascarón reutilizable por CRUD y otro sobre estructurar el proyecto de mejor forma.
+
+Esta sección tiene 2 objetivos generales, el primero es crear un mantenimiento de usuarios completo y el segundo, es crear un componente re utilizable que nos permita subir fácilmente imágenes de Hospitales, Usuarios y Médicos.
+
+Veremos sobre:
+
+1- Crear componente de usuarios
+2- Búsqueda de usuarios
+3- Borrar usuario
+4- Actualizar Rol del usuario
+5- Crear un modal para la subida de la imagen
+6- Emitir notificaciones de cambio en imagenes
+
+Al finalizar, tendremos respaldos locales y remotos, junto a su release tag
+
+					VIDEO 197 CONTINUACION DEL PROYECTO
+
+Arrancamos todo y vamos a crear otra sección en el sidebar.Recuerda que tenemos un servicio para hacer esto:
+
+* En el sidebar.service.ts agrego otra posición al arreglo...  
+menu: any[] = [
+    { 
+      titulo:'Dashboard',
+      icono:'mdi mdi-gauge', 
+      submenu:[
+        {titulo:'Main', url:'/'},
+        {titulo:'GraficaDona', url:'grafica-dona'},
+        {titulo:'ProgressBar', url:'progress'},
+        {titulo:'Promesas', url:'promesas'},
+        {titulo:'Rxjs', url:'rxjs'},
+      ]
+    }
+  ]
+Fijate que nos habiamos dejado el icono.Fernando comenta que hay varias formas de enlazar la propiedad con la template:
+<li *ngFor="let item of menuItems">
+  <i [class]="item.icono"> <- si pongo [] en una propiedad interpreta JS en el sttring.
+Otra forma,sin usar los [] es <i class="{{ item.icono }}",es decir o uso [] en el atributo o uso {{ }} en el valor.
+Incluso puedo usar [ngClass]="item.icono".
+NOTA:al implementar i18next puedo albergar los archivos json en el servidor o en le cliente,en el cliente pesará más la app,pero el acceso es más rápido(tratandose de texto diría que es la mejor opción).
+
+					VIDEO 198 CREAR EL COMPONENTE DE USUARIOS
+
+Trabajemos sobre este nuevo componente.Fijate como puedo usar las clases fa-<number>x sobre un icono de font awesome:
+
+   <div class="alert alert-info text-center" role="alert">
+          <h4 class="alert-heading">Cargando</h4>
+          <i class="fa fa-spin fa-refresh fa-2x"></i>
+          <p class="mb-0">Por favor,espere</p>
+   </div>
+Y como puedo crear un spinner con fa-spin + fa-refresh.Recuerda que fa-2x lo hace un poco más grande.
+
+Traemos la tabla de la template y cambiamos los th y td por los de un usuario.ESto lo ponemos en un archivo aparte ya que nos hará de cascarón.Buena idea.
+
+			VIDEO 199 CARGAR LOS USUARIOS DE FORMA PAGINADA
+
+La petición debe ir al endpoint que ya devuelve los usuarios de forma paginada.Fijate que estamos repitiendo mucho código con los headers:
+
+  cargarUsuarios(desde: number = 0) {
+    return this.http.get(`${base_url}/usuarios?desde=${desde}`,{
+      headers:{
+      'x-token':this.token
+    }});
+  }
+  
+Hay varias cosas que podemos hacer,pero una muy sencilla dado que estamos en una clase es crearnos un getter que devuelva el objeto que necesito:
+
+get headers(){
+  return {
+   headers: { 'x-token': this.token} 
+} }
+
+NOTA:Fijate que tenemos problemas para desestructurar en la Subscription.Esto es porque no hemos dicjo que devuelve el Observable.Hay varias formas de solucionar esto.
+
+1ª: pasarle un objeto como tipo.Es válido pero muy feo el código  
+ cargarUsuarios(desde: number = 0) {
+    return this.http.get<{total:number;usuarios:Usuario[]}>(`${base_url}/usuarios?desde=${desde}`, this.headers);
+  }
+
+2ª: crear una interfaz:
+export interface CargarUsuario {
+  total: number;
+  usuarios: Usuario[];
+}
+  cargarUsuarios(desde: number = 0) {
+    return this.http.get<CargarUsuario>(`${base_url}/usuarios?desde=${desde}`, this.headers);
+  }
+Realmente parece más legible usar la segunda opción.
+Como ya tengo el total y el arreglo de usuarios itero por la table con un NgFor.
+
+					VIDEO 200 PAGINAR LOS USUARIOS
+
+
+
+
+
