@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, delay, map, tap } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 import { CargarUsuario } from '../interfaces/cargar-usuarios.interface';
@@ -132,7 +132,19 @@ export class UsuarioService {
   }
 
   cargarUsuarios(desde: number = 0) {
-    return this.http.get<CargarUsuario>(`${base_url}/usuarios?desde=${desde}`, this.headers);
+    return this.http.get<CargarUsuario>(`${base_url}/usuarios?desde=${desde}`, this.headers)
+      .pipe( 
+        delay(50),
+        map(resp => {
+          const usuarios = resp.usuarios.map( user => new Usuario(user.nombre, user.email, '',user.img, user.google,user.role,user.uid));
+
+          return { 
+            total: resp.total,
+              usuarios
+          };
+        })
+      );
   }
   
 }
+ 

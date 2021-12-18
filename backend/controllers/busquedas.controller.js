@@ -29,23 +29,30 @@ exports.getByPatron = async (req, res = response) => {
 
 // /api/todo/coleccion/:tabla/:patron
 exports.getByCollectionAndPattern = async (req, res = response) => {
+  const desde = Number(req.query.desde) || 0;
+
   const tabla = req.params.tabla;
   const patron = req.params.patron;
   const regex = new RegExp(patron, "i");
 
   let data;
+  let total;
   switch (tabla) {
     case "medicos":
       data = await Medico.find({ nombre: regex })
         .populate("usuario", "nombre img")
-        .populate("hospital", "nombre img");
+        .populate("hospital", "nombre img")
+        .skip(desde).limit(5);
+      total = await Medico.countDocuments({ nombre: regex });
       break;
     case "hospitales":
       data = await Hospital.find({ nombre: regex })
-        .populate("usuario", "nombre img");
+        .populate("usuario", "nombre img").skip(desde).limit(5);
+      total = await Hospital.countDocuments({ nombre: regex });
       break;
     case "usuarios":
-      data = await Usuario.find({ nombre: regex });
+      data = await Usuario.find({ nombre: regex }).skip(desde).limit(5);
+      total = await Usuario.countDocuments({ nombre: regex });
       break;
     default:
       return res.status(400).json({
@@ -57,5 +64,6 @@ exports.getByCollectionAndPattern = async (req, res = response) => {
   res.json({
     ok: true,
     resultados: data,
+    total,
   });
 };

@@ -92,7 +92,124 @@ Como ya tengo el total y el arreglo de usuarios itero por la table con un NgFor.
 
 					VIDEO 200 PAGINAR LOS USUARIOS
 
+Realmente no es muy complicado implementar una paginación.Creo dos botones,uno que restará de 5 en 5 y otro que sume.ESto es fácil:
+<button (click)="cambiarPagina(-5)" class="btn btn-secondary">Anterior</button>
+<button (click)="cambiarPagina(+5)" class="btn btn-secondary ml-1">Siguiente</button>
 
+  cambiarPagina(valor:number){
+    /* si mando 5 desde será 5,despues 10,despues 15,etc... */
+    this.desde += valor;
+    /* controlo que nunca sea menor que 0 */
+    if(this.desde < 0){
+      this.desde = 0;
+    }
+    /* y que nunca sea mayor que lo que me traiga */ 
+    if(this.desde > this.totalUsuarios){
+      this.desde -= valor;
+    }
+    this.cargarUsuarios();
+  }
+En este caso cargarUsuarios hace la petición mediante el servicio al backend enviandole el desde(ya el propio backend me envia siempre los siguientes 5).Fácil.
 
+Por último muestro condicionalmente la label de Google o byEmail:
+ <span *ngIf="usuario.google" class="label label-danger">Google</span>  
+ <span *ngIf="!usuario.google" class="label label-info">ByEmail</span>  
 
+				VIDEO 201 DETALLES ESTÉTICOS DE LA PÁGINA
+
+ Fernando observa que todas las columnas son recalculadas en cada paginación y aveces flashea un poco.Además,realmente no necesito que recalcule las columnas para avatar,acciones,auth y role,asi que las damos un tamaño fijo con una clase:
+
+  <th class="w100">Avatar</th>
+  <th>Email</th>
+  <th>Nombre</th>
+  <th class="w100">Role</th>
+  <th class="w100">Auth</th>
+  <th class="text-nowrap w100">Acciones</th>
+
+Puedo observar que es una gran mejora visual.
+Bien,para mostrar el avatar podemos tomar varios caminos,pero de la forma que estoy recibiendo la data no puedo simplemente llamar al getter pues no tipé el Observable así.
+Podríamos hacer un customPipe,pero por fines educativos vamos a transformar la salida del Observable.Fijate que es muy interesante lo que hace:
+
+cargarUsuarios(desde: number = 0) {
+    return this.http.get<CargarUsuario>(`${base_url}/usuarios?desde=${desde}`, this.headers)
+      .pipe( map(resp => {
+          const usuarios = resp.usuarios.map( user => new Usuario(user.nombre, user.email, '',user.img, user.google,user.role,user.uid));
+
+          return { 
+            total: resp.total,
+              usuarios
+          };
+        })
+      );
+  }
+Mapea la respuesta y crea una nueva instancia de Usuario,y devuelve un arreglo de usuarios junto al total.Genial.
+
+				VIDEO 202 MENSAJE DE CARGA DE INFORMACIÓN
+
+Fijate que para mostrar el loading puedo crearme una propiedad boleana:
+  
+cargarUsuarios(){
+    this.cargando = true;
+    this.usuarioService.cargarUsuarios(this.desde)
+    .subscribe( ({total,usuarios}) => {
+      this.totalUsuarios = total;
+        this.usuarios = usuarios;
+        this.cargando = false;
+    } );
+  }
+Incluso puedo usar el operador delay para ver como queda.Increíble.Ya sólo falta mostrar el loading con un *ngIf="cargando" y de paso se le puede poner un efecto de fade muy vistoso.
+
+					VIDEO 203 BUSQUEDA DE USUARIOS  
+
+La parte de buscar usuario es incluso más sencilla.Fijate que ya tengo un endpoint /api/todo/:coleccion/usuarios/e <- que me devuelve todos los usuarios que tengan la letra 'e'(puede que sea mejor startsWith en vez de includes()).
+
+Además,como vamos a hacer tanto busquedas por usuarios como por medicos y hospitales mejor creamos un servicio sólo para buscar.
+
+La función es mejor que reciba una enum con las colecciones,además del término.
+Fijate que en mi app serían posts o usuarios.Genial
+
+buscar(tipo:'usuarios'|'medicos'|'hospitales', termino:string) {
+
+const url = `${base_url}/todo/coleccion/${tipo}/${termino}`;
+    return this.http.get(url, this.headers)
+      .pipe(
+        map<any,any>( (resp) => resp.resultados)
+      );
+  }
+Fijate que si no pongo que entra un any al map TS lo tomará como que entra un Ojbect y no va a poder hacer resp.resultados pues no existe en Object.Hay varias formas de solucionar esto,la mejor sería crear ahora los types pero vamos a usar any(también podia haber usado map( (resp:any) => resp.resultados).
+
+Sea como fuere ya tengo mi servicio para buscar.Como es sólo un input es mejor no usar un formulario reactivo.Puedo hacer en el keyDown(al pulsar) o en el keyUp(al levantar).Lo haremos al levantar la tecla:
+
+* Recuerda que Angular permite usar referencias locales en la template,es decir,que le puedo dar un nombre al cualquiera a ese HMTLElement.
+ <input 
+   #txtTermino
+   (keyup)="buscar(txtTermino.value)"
+
+Realmente ya tengo el término para buscar,jaja, y la colección ya la sé.Increible.Simplemente ya puedo disparar la petición mediante el servicio.
+
+buscar(termino:string) {
+  this.busquedaService.buscar('usuarios',termino)
+  .subscribe( resultados => this.usuarios=resultados);
+
+Esto meterá en la tabla los usuarios.claro que me trae todos porque el endpoint no está paginado,y no accede al avatar,etc.Hay que pulir más este servicio.
+
+				VIDEO 204 PULIR LA BUSQUEDA DE USUARIOS
+
+Puedo mostrar los botones de anterior y siguiente(o implementar una paginación) con un ngIf que mire si hay algo en el input:
+<div *ngIf="txtTermino.value.length === 0">
+  <button (click)="cambiarPagina(-5)" class="btn btn-secondary">Anterior</button>
+  <button (click)="cambiarPagina(+5)" class="btn btn-secondary ml-1">Siguiente</button>
+</div>
+Sin embargo sería mejor implementar la paginación en el endpoint(hecho).Ahora bien,no podemos acceder al avatar por ese any,hay que transformar la respuesta 
+
+  private transformarUsuarios(resultados: any[]): Usuario[] {
+    return resultados.map(
+      user => new Usuario(user.nombre, user.email, '',user.img, user.google,user.role, user.uid)
+    );
+  }
+  
+Esta vez le pasamos una función.
+IMPORTANTE: recuerda que para este tipo de casos debo usar el operador debounceTime para que no bombardeen la DB con un tiempo razonable
+
+	
 
