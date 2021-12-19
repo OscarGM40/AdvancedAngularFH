@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { catchError, delay, map, tap } from 'rxjs/operators';
+import { catchError, delay, filter, map, tap } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 import { CargarUsuario } from '../interfaces/cargar-usuarios.interface';
@@ -23,7 +23,7 @@ const base_url = environment.base_url;
 export class UsuarioService {
 
   public auth2: any;
-  public usuario!:Usuario;
+  public usuario!: Usuario;
 
   constructor(
     private http: HttpClient,
@@ -31,8 +31,8 @@ export class UsuarioService {
     private ngZone: NgZone
   ) { this.googleInit(); }
 
-  get token(): string { 
-    return localStorage.getItem('token') || ''; 
+  get token(): string {
+    return localStorage.getItem('token') || '';
   }
 
   get uid(): string {
@@ -76,14 +76,14 @@ export class UsuarioService {
 
   validarToken(): Observable<boolean> {
 
-    return this.http.get(`${base_url}/login/renew`,this.headers)
+    return this.http.get(`${base_url}/login/renew`, this.headers)
       .pipe(
         tap((resp: any) => {
           // console.log(resp.usuario)
-          const { email,google,nombre,role,img="",id:uid } = resp.usuario;
+          const { email, google, nombre, role, img = "", id: uid } = resp.usuario;
 
-          this.usuario = new Usuario(nombre, email, '',img, google,role,uid);
-          
+          this.usuario = new Usuario(nombre, email, '', img, google, role, uid);
+
           localStorage.setItem('token', resp.token);
         }),
         map((resp: any) => {
@@ -104,7 +104,7 @@ export class UsuarioService {
       );
   }
 
-  actualizarPerfil(data: { email: string, nombre: string, role?: string}): Observable<Object> {
+  actualizarPerfil(data: { email: string, nombre: string, role?: string }): Observable<Object> {
     data = {
       ...data,
       role: this.usuario.role,
@@ -133,18 +133,43 @@ export class UsuarioService {
 
   cargarUsuarios(desde: number = 0) {
     return this.http.get<CargarUsuario>(`${base_url}/usuarios?desde=${desde}`, this.headers)
-      .pipe( 
+      .pipe(
         delay(50),
-        map(resp => {
-          const usuarios = resp.usuarios.map( user => new Usuario(user.nombre, user.email, '',user.img, user.google,user.role,user.uid));
-
-          return { 
+       /*  map((resp: CargarUsuario) => {
+          const usuarios = resp.usuarios.filter(usuario => usuario.isActive === true);
+          console.log(usuarios);
+          return {
             total: resp.total,
-              usuarios
+            usuarios
+          }
+        }), */
+        map(resp => {
+          const usuarios = resp.usuarios.map(user => new Usuario(
+            user.nombre,
+            user.email,
+            '',
+            user.img,
+            user.google,
+            user.role,
+            user.id,
+            user.id));
+          // console.log(usuarios);
+          return {
+            total: resp.total,
+            usuarios
           };
         })
       );
   }
+
+  eliminarUsuario(usuario: Usuario) {
+    const url = `${base_url}/usuarios/${usuario.uid}`;
+    return this.http.delete(url, this.headers);
+  }
   
+  guardarUsuario(usuario: Usuario) {
+    return this.http.put(`${base_url}/usuarios/${usuario.uid}`, usuario, this.headers);
+  }
+
+
 }
- 

@@ -1,6 +1,10 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import Swal from 'sweetalert2';
+
 import { Usuario } from 'src/app/models/usuario.model';
+
 import { BusquedasService } from 'src/app/services/busquedas.service';
+import { ModalImagenService } from 'src/app/services/modal-imagen.service';
 import { UsuarioService } from 'src/app/services/usuario.service';
 
 @Component({
@@ -22,7 +26,8 @@ export class UsuariosComponent implements OnInit {
 
   constructor(
     private usuarioService: UsuarioService,
-    private busquedaService: BusquedasService
+    private busquedaService: BusquedasService,
+    private modalImagenService: ModalImagenService
   ) { }
 
   ngOnInit(): void {
@@ -53,7 +58,7 @@ export class UsuariosComponent implements OnInit {
     if (this.desde >= this.totalUsuarios) {
       this.desde -= valor;
     }
-    
+
     this.cargarUsuarios();
   }
 
@@ -82,4 +87,48 @@ export class UsuariosComponent implements OnInit {
       });
   }
 
+  eliminarUsuario(usuario: Usuario) {
+ 
+    if (usuario.uid === this.usuarioService.usuario.uid) {
+      Swal.fire('No puede borrar usuario', 'No se puede borrar a si mismo', 'error');
+      return;
+    }
+    
+    Swal.fire({
+      title: 'Borrar usuario',
+      text: `Esta seguro que desea borrar a ${usuario.nombre}`,
+      icon: 'question',
+      showCancelButton: true,
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Si, borrarlo!',
+      confirmButtonColor: '#3085d6',
+    }).then((result) => {
+      if (result.value) {
+        this.usuarioService.eliminarUsuario(usuario)
+          .subscribe(() => {
+            Swal.fire(
+              'Usuario borrado',
+              `${usuario.nombre} ha sido eliminado correctamente`,
+              'success');
+              this.totalUsuarios--;
+              if(this.desde === this.totalUsuarios){
+                this.desde -= 5;
+              }
+            this.cargarUsuarios();
+          });
+      };
+    })
+  };
+
+ cambiarRole(usuario:Usuario){
+   this.usuarioService.guardarUsuario(usuario)
+    .subscribe((r)=>{
+      console.log(r);
+    })
+ }
+
+ abrirModal(usuario: Usuario) {
+   this.modalImagenService.abrirModal('usuarios', usuario.uid!, usuario.img);
+  }
+ 
 }

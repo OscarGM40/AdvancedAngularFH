@@ -4,7 +4,6 @@ const bcrypt = require("bcryptjs");
 const { generarJWT } = require("../helpers/jwt");
 
 exports.getUsuarios = async (req, res) => {
-
   // ojo que si hago el Number(undefined) necesito || 0
   const desde = Number(req.query.desde) || 0;
   // console.log(desde);
@@ -18,18 +17,17 @@ exports.getUsuarios = async (req, res) => {
   const total = await Usuario.countDocuments(); */
 
   // Fijate que Promise.all va a respetar el orden de cada promesa asi que puedo usar desestructuración de arreglos y asignar posicionalmente el nombre que quiero.Además recuerda que Promise.all también es una promesa(tengo que usar async o then).
-  const [ usuarios, total ] = await Promise.all([
-    Usuario.find({},"nombre email role google isActive img")
+  const [usuarios, total] = await Promise.all([
+    Usuario.find({isActive:true}, "nombre email role google isActive img")
       .skip(desde)
       .limit(5),
-    Usuario.countDocuments(),//este va a ser [1]
+    Usuario.countDocuments({isActive:true}), //este va a ser [1]
   ]);
-
 
   res.json({
     ok: true,
     usuarios,
-    total
+    total,
   });
 };
 
@@ -84,28 +82,26 @@ exports.actualizarUsuario = async (req = request, res = response) => {
       });
     }
 
-    
     usuarioDB.nombre = nombre;
 
     if (usuarioDB.email !== email) {
       const existeEmail = await Usuario.findOne({ email });
-      
-      if(!existeEmail) {
-        if(usuarioDB.google === false) {
-        usuarioDB.email = email;
+
+      if (!existeEmail) {
+        if (usuarioDB.google === false) {
+          usuarioDB.email = email;
         } else {
           return res.status(400).json({
             ok: false,
             msg: "No puedes cambiar el correo de un usuario de google",
           });
         }
-      }else{
+      } else {
         return res.status(400).json({
           ok: false,
           msg: "El correo ya existe",
         });
       }
-
     }
     usuarioDB.role = role;
 
@@ -142,6 +138,13 @@ exports.borrarUsuario = async (req = request, res = response) => {
       });
     }
 
+    if (!usuarioDB.isActive) {
+      return res.status(400).json({
+        ok: false,
+        msg: "El usuario ya está desactivado",
+      });
+    }
+
     usuarioDB.isActive = false;
     await usuarioDB.save();
 
@@ -156,4 +159,4 @@ exports.borrarUsuario = async (req = request, res = response) => {
       msg: "Error inesperado",
     });
   }
-}
+};

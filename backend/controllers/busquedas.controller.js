@@ -51,8 +51,8 @@ exports.getByCollectionAndPattern = async (req, res = response) => {
       total = await Hospital.countDocuments({ nombre: regex });
       break;
     case "usuarios":
-      data = await Usuario.find({ nombre: regex }).skip(desde).limit(5);
-      total = await Usuario.countDocuments({ nombre: regex });
+      data = await Usuario.find({ nombre: regex,isActive:true }).skip(desde).limit(5);
+      total = await Usuario.countDocuments({ nombre: regex,isActive:true });
       break;
     default:
       return res.status(400).json({

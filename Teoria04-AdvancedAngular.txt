@@ -211,5 +211,168 @@ Sin embargo sería mejor implementar la paginación en el endpoint(hecho).Ahora 
 Esta vez le pasamos una función.
 IMPORTANTE: recuerda que para este tipo de casos debo usar el operador debounceTime para que no bombardeen la DB con un tiempo razonable
 
-	
+					VIDEO 205 BORRANDO USUARIOS	
+
+Todo el mundo va a poder editar su propio usuario,pero sólo un admin podrá borrar al resto.Ya implementaremos esto.Además,mostraremos un pequeño promt antes de proceder al borrado.Sweetalert ya nos proporciona un prompt.
+ 
+Fijate que además estoy en un *ngFor="let usuario of usuarios" asi que puedo mandar como argumento el usuario de esa row muy fácil:
+ <a class="cursor" (click)="eliminarUsuario(usuario)">...
+
+Sólo hay que crear un servicio que llame al endpoint de borrar.Fijate que Sweetalert ya me permite llamar a modales con aceptar/cancelar y mostrar otro si acepto:
+
+  eliminarUsuario(usuario: Usuario) {
+
+    Swal.fire({
+      title: 'Borrar usuario',
+      text: `Esta seguro que desea borrar a ${usuario.nombre}`,
+      icon: 'question',
+      showCancelButton: true,
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Si, borrarlo!',
+      confirmButtonColor: '#3085d6',
+    }).then((result) => {
+      if (result.value) {
+       // BORRAR EL USUARIO EN LA DDBB
+        Swal.fire('Deleted', `${usuario.nombre} ha sido borrado`,
+          'success');
+      }
+    });
+  }
+También faltó que cuando borro el registro 11 o 16,etc me vuelva a la paǵina anterior(va dentro del subscribe):
+  this.totalUsuarios--;
+  if(this.desde === this.totalUsuarios){
+      this.desde -= 5;
+  }
+Y faltó que se borre correctamente tras buscar.
+
+				VIDEO 206 FRONTEND- NO BORRARME A MI MISMO
+
+Realmente no quiero borrar desde el frontend a mi como usuario.Fijate que es algo que debe controlarse ya desde el backend,realmente ha dejado alguna cosa sin hacer que hay que controlar.
+
+  if (usuario.uid === this.usuarioService.usuario.uid) {
+      Swal.fire('No puede borrar usuario', 'No se puede borrar a si mismo', 'error');
+      return;
+    }
+    
+					VIDEO 207 EDITAR EL ROL DEL USUARIO
+
+Realmente ya teniamos como cambiar el name y el email,el tipo de auth no puedo cambiarlo,asi que sólo queda el rol.No vamos a usar otro botón,sino que usaremos un dropdown.
+ES bastante sencillo:
+  <td>
+     <select class="form-controls" 
+        [(ngModel)]="usuario.role"
+        (change)="cambiarRole(usuario)">
+        <option value="ADMIN_ROLE">Admin</option>
+        <option value="USER_ROLE">User</option>
+     </select>
+  </td>
+Fijate que con ngModel puedo enlazar cualquier propiedad,pero si es un select cogerá el valor como option selected.Genial.
+Nos creamos un método para el onChange y le paso el usuario o el usuario.id.
+ cambiarRole(usuario:Usuario){
+   this.usuarioService.guardarUsuario(usuario)
+    .subscribe((r)=>{
+      console.log(r);
+    })
+ }
+Realmente falta alguna cosa por controlar.Ya lo haremos.
+
+			VIDEO 208 MODAL PARA LA CARGA DE IMAGENES REUSABLE
+
+Queremos cambiar el avatar desde mantenimiento, y además hacerlo reusable para el futuro mantenimiento o CRUD de hospitales y médicos.
+Como va a ser un componente que declararé en un modulo de reutilizables pero lo usaré en otro lado ojo que tengo que exportar este tipo de componentes reutilizables:
+  exports: [
+    IncrementadorComponent,
+    DonaComponent,
+    ModalImagenComponent
+
+Recuerda subir este componente a un punto alto(aqui usaré Pages.component.html que está muy arriba).Así cualquier componente podrá abrir el modal:
+<app-modal-imagen></app-modal-imagen> <- usar su selector en un punto alto
+
+Bien,en cuanto a ese modal siempre debo ponerlo encima de un background-color con opacity:Esta clase para el div que ocupa toda la pantalla valdrá. 
+
+.fondo-modal-imagen {
+  background-color: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999;
+}
+
+Para cerrarlo y ocultarlo hay que crearse una propiedad booleana:
+
+  public mostrarModal:boolean=true;
+
+  cerrarModal(){
+    this.mostrarModal=false;
+  }
+
+			VIDEO 209 CONTROLAR EL MODAL Y CARGA DE IMAGENES
+
+Dado que no vamos a usar muchos más de 10 servicios podemos tenerlos todos en una misma carpeta,pero si son demasiados es mejor separarlos.Asi pues creo un nuevo servicio para el modal:
+ng g s services/modalImagen
+
+Además,ya no vamos a tocar nada en el modalImagen si no es desde un servicio.Fijate como la inyección de dependencias no es porque la propiedad fuera privada:
+
+ constructor(public modalService: ModalImagenService) { }
+
+* Nos vamos a traer la instancia como publica,esto hará que se pase todo por referencia(confirmar que una inyección privada no pasa por referencia y una pública sí).Confirmo ya que si no la inyecto publica no puedo acceder al servicio en la template,esta es la primera gran diferencia,que puedo usar el servicio en la template:
+
+<div class="fondo-modal-imagen animated fadeIn fast"
+ [class.oculto]="modalImagenService .ocultarModal"
+>
+
+Fijate que usar el servicio en la template me abre un abanico inmenso de posibilidades.Ahora cerrarModal en el modal llama al cerrarModal del servicio que cambia su propiedad privada,la cual tiene el getter que tenemos enganchado a la clase dinámica 'oculto'.Genial,queda desacoplado.
+
+Ahora simplemente llamamos en el click sobre el avatar al abrirModal del service.Está perfecto.
+Fijate que pasar esto por referencia es clave:
+<div class="fondo-modal-imagen animated fadeIn fast"
+ [class.oculto]="modalImagenService .ocultarModal"
+>
+Si usara otra forma tendría que hacer cambios.
+
+				VIDEO 210 CARGAR IMAGENES USANDO EL MODAL
+
+Realmente ya tengo casi toda la lógica hecha en el updateProfile que hicimos.Me traigo las dos img y el input type file y sus dos métodos.En el servicio haremos la lógica,pero primero al pulsar en el avatar le paso el usuario como argumento y lo envio a un método del servicio:
+
+* En el click del avatar llamo a abrirModal con el usuario como arg:
+<img 
+  src="{{usuario.getImagenUrl}}" 
+  alt="avatarUsuario"
+  class="mini-avatar cursor"
+  (click)="abrirModal(usuario)"
+ >
+
+En la clase lo recogo y llamo al servicio con los argumentos necesarios
+
+ abrirModal(usuario: Usuario) {
+   this.modalImagenService.abrirModal('usuarios', usuario.uid!, usuario.img);
+  }
+
+Ese abrirModal del service(no confundir nombres):
+  
+abrirModal(
+    tipo:'usuarios' | 'medicos' | 'hospitales',
+    id: string,
+    img: string ='no-img'
+  ) {
+    this._ocultarModal = false;
+    this.tipo = tipo;
+    this.id = id;
+    if(img.includes('https')){
+      this.img = img;
+    }else {
+      this.img = `${base_url}/upload/${tipo}/${img}`;
+    }
+  }
+Puedo ver que ya hace el switch de imagenes y que carga la actual al abrir el modal.Sin embargo,aún falta guardarlo en la DB.
+Por último,fijate como he referenciado desde la clase a un elemento cualquiera de el .html correspondiente sin usar ViewChild y le he cambiado el valor:
+
+(<HTMLInputElement>document.getElementById('imagen')).value =''; Genial.
+
+			VIDEO 211 ACTUALIZAR LA IMAGEN DEL USUARIO DESDE EL MODAL 
+
+
+
 
