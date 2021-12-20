@@ -14,6 +14,8 @@ import { PromesasComponent } from './promesas/promesas.component';
 
 import { RxjsComponent } from './rxjs/rxjs.component';
 import { UsuariosComponent } from './mantenimientos/usuarios/usuarios.component';
+import { HospitalesComponent } from './mantenimientos/hospitales/hospitales.component';
+import { MedicosComponent } from './mantenimientos/medicos/medicos.component';
 
 
 
@@ -58,8 +60,10 @@ const routes: Routes = [
                title: 'Perfil Usuario',
             }
          },
-         /* mantenimientos === CRUD por colección */
-         { path:'usuarios', component: UsuariosComponent, data: { title: 'Usuarios de aplicaciòn' } },
+         /* mantenimientos === CRUD por colección data es para las breadcrumbs   */
+         { path:'usuarios', component: UsuariosComponent, data: { title: 'Mantenimiento de Usuarios' } },
+         { path:'hospitales', component: HospitalesComponent, data: { title: 'Mantenimiento de Hospitales' } },
+         { path:'medicos', component: MedicosComponent, data: { title: 'Mantenimiento de Medicos' } },
       ]
    }];
 

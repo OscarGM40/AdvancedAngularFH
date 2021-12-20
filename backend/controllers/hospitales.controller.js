@@ -4,14 +4,20 @@ const Medico = require("../models/Medico");
 const mongoose = require("mongoose");
 
 exports.getHospitales = async (req, res = response) => {
-  const hospitales = await Hospital.find({}).populate(
-    "usuario",
-    "nombre email img"
-  );
+  const desde = Number(req.query.desde) || 0;
+
+  const [ hospitales,total ] = await Promise.all(
+    [
+      Hospital.find({}).populate(
+      "usuario",
+      "nombre email img").skip(desde).limit(5),
+      Hospital.countDocuments(),
+    ]);
 
   res.json({
     ok: true,
     hospitales,
+    total,
   });
 };
 

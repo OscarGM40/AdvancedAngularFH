@@ -373,6 +373,140 @@ Por último,fijate como he referenciado desde la clase a un elemento cualquiera 
 
 			VIDEO 211 ACTUALIZAR LA IMAGEN DEL USUARIO DESDE EL MODAL 
 
+Realmente ya tengo creada la lógica asi que puedo copiar el método e inyectar el servicio que hace la petición.Tendrá un par de cambios,ya que el id lo tengo ya en el modalService:
 
+  guardarAvatar() {
 
+    const id = this.modalImagenService.id;
+    const tipo = this.modalImagenService.tipo;
 
+    this.fileUploadService
+      .actualizarFoto(this.imagenSubida, tipo, id)
+      .then(img => {
+        Swal.fire('Guardado', 'Avatar actualizado', 'success');
+        this.cerrarModal();
+      })
+      .catch((error) => {
+        console.log(error);
+        Swal.fire('Error', error.error.msg, 'error');
+      });
+  }
+Sin embargo,falta avisar al componente que la imagen se actualizó.Hay varios caminos para esto,como usar un Observable o un EventEmitter que emita algo cuando hay que actualizar el componente en el modalService.Genial.
+
+ /* para informar de una nueva imagen usaremos la clase EventEmitter.Realmente puedo emitir lo que quiera.Emitiremos un string */
+public nuevaImagen: EventEmitter<string> = new EventEmitter<string>();
+
+Recuerda que para emitir era con emit():
+
+ guardarAvatar() {
+
+    const id = this.modalImagenService.id;
+    const tipo = this.modalImagenService.tipo;
+
+    this.fileUploadService
+      .actualizarFoto(this.imagenSubida, tipo, id)
+      .then(img => {
+        Swal.fire('Guardado', 'Avatar actualizado', 'success');
+        /* aqui sé que se subió la imagen */
+        this.modalImagenService.nuevaImagen.emit(img);
+
+IMPORTANTE!: esta propiedad nuevaImagen es un Observable,un EventEmitter es un Observable y me permite subscribirme,usar operadores,... solo que emito valores con emit en vez de con next.
+
+En el usuarios.cmponent escucho en el ngOnInit por un cambio y recargo todos los usuarios si lo hay.Sólo necesito recargar los Usuarios,pero con un pequeño delay para que suba la imagen al servidor 
+
+ this.imgSubs =  this.modalImagenService.nuevaImagen
+      .pipe(delay(100))
+      .subscribe(img => this.cargarUsuarios());
+  }
+
+Por último,no tiene sentido que yo mantenga esta subscripción afuera de este componente.asi que la destruyo al salir de este componente que es el mantenimiento de usuarios.Fijate que tendré que hacer lo mismo para los otros dos y cómo es una gran idea hacerlo.
+
+  ngOnDestroy(): void {
+    this.imgSubs.unsubscribe();
+  }
+
+			SECCION 15 MEDICOS Y HOSPITALES CRUD/MANTENIMIENTO
+
+El crud de hospitales será sencillo,el nombre y el creador.El de médicos tendrá algo más de complejidad.
+
+Esta sección tiene por objetivo poner a prueba todo lo aprendido hasta el momento, hay una tarea bastante grande que pueden demorar mínimo unos 20 minutos en hacerla  (si no se equivocan en nada)
+
+Pero puntualmente, estos son los temas:
+
+1- Explicación de la tarea
+2- Documentos de la tarea
+3- Detalles sobre el pipe de las imagenes
+4- Resolución de la tarea
+5- Componente de Médico y Médicos
+6- Borrar médicos
+7- Crear nuevo médico
+8- Mostrar información en base a una selección de un hospital
+9- Cargar médico
+10- Actualizar registro de un médico
+
+Al finalizar, tendremos respaldo en GitHub, release tag y commits locales para proteger nuestro trabajo
+
+				VIDEO 216 DISEÑO DE LA PANTALLA DE HOSPITALES
+
+Empezamos creando los componentes por cli,modificando las rutas en el .routes y copiando el cascarón.
+
+				VIDEO 217 MODELO Y SERVICIO PARA HOSPITALES	
+
+Creo el modelo(que será una clase).Esta vez vamos a usar un pipe para la foto/avatar en vez de un método.
+
+IMPORTANTE: ¿como saber si debo usar una clase o una interfaz?Si necesito métodos mejor usar una clase.Además,siempre puedo empezar con una interfaz y cambiar a una clase si hace falta.
+
+interface _hospitalUser {
+  _id: string;
+  nombre: string;
+  img: string;
+}
+
+export class Usuario {
+
+  constructor(
+    public nombre: string,
+    public _id?: string,
+    public img?: string,
+    public usuario?:_hospitalUser,
+  ) { }
+
+}
+
+Fijate que hemos tenido que crear una interfaz para tipar el usuario,que tiene sólo unas pocas propiedades.
+
+Creo un servicio que haga el GET:
+  cargarHospitales(desde: number = 0) 
+  {
+    return this.http.get(`${base_url}/hospitales?desde=${desde}`, this.headers)
+  }
+Esta vez no transformamos creando una instancia,dado que usaremos un pipe.
+
+Fijate que puedo usar un object type annotation en un genérico:
+
+return this.http.get<{ ok: boolean, hospitales: Hospital[] }
+Aunque puede que tenga que tipar los headers:
+ get headers(): any  {
+
+Sea como sea esta solución parece buena:
+cargarHospitales(desde: number = 0) 
+  {
+    return this.http.get(`${base_url}/hospitales?desde=${desde}`, this.headers).pipe(
+      map<any,Hospital[]>( (resp:{ok:boolean,hospitales:Hospital[],total:number}) => resp.hospitales));
+  }
+
+			VIDEO 218 MOSTRAR LOS HOSPITALES EN LA TEMPLATE
+
+En el componente llamamos al servicio,habrá que crearse una propiedad para recoger el arreglo de hospitales además de un boleano para el loading:
+
+   <tr *ngFor="let hospital of hospitales">
+      <td>{{hospital.img}}</td>
+      <td>
+         <input type="text" 
+            class="form-control"
+            placeholder="Nombre del hospital"
+            [(ngModel)]="hospital.nombre">
+      </td>
+NOTA:fijate como [(ngModel)] hace como el "value" metiendo el nombre como valor.recuerdalo,es importante.
+
+			VIDEO 219 PIPES PARA MOSTRAR LAS IMÁGENES
