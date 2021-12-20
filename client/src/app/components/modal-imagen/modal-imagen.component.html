@@ -29,9 +29,6 @@
           </div>
           
           <input type="file" (change)="cambiarAvatar($event.target.files[0])" id="imagen">
-
-          
-          
           
         </div>
       </div>
@@ -47,7 +44,8 @@
 
         <button 
           type="button"
-          class="btn btn-primary">
+          class="btn btn-primary"
+          (click)="guardarAvatar()">
           Actualizar foto
         </button>
       </div>

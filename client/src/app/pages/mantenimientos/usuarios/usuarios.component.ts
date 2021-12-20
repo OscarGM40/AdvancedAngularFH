@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import Swal from 'sweetalert2';
 
 import { Usuario } from 'src/app/models/usuario.model';
@@ -6,6 +6,8 @@ import { Usuario } from 'src/app/models/usuario.model';
 import { BusquedasService } from 'src/app/services/busquedas.service';
 import { ModalImagenService } from 'src/app/services/modal-imagen.service';
 import { UsuarioService } from 'src/app/services/usuario.service';
+import { delay } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-usuarios',
@@ -13,7 +15,8 @@ import { UsuarioService } from 'src/app/services/usuario.service';
   styles: [
   ]
 })
-export class UsuariosComponent implements OnInit {
+export class UsuariosComponent implements OnInit, OnDestroy{
+
   @ViewChild('txtTermino') inputBusqueda!: ElementRef;
 
   public totalUsuarios: number = 0;
@@ -23,18 +26,37 @@ export class UsuariosComponent implements OnInit {
   public desdeB: number = 0;
   public cargando: boolean = true;
   public totalBusqueda: number = 0;
+  public usuario!: Usuario;
+
+
+  public imgSubs!: Subscription;
 
   constructor(
     private usuarioService: UsuarioService,
     private busquedaService: BusquedasService,
     private modalImagenService: ModalImagenService
-  ) { }
+  ) { 
+    this.usuario = this.usuarioService.usuario;
+  }
 
   ngOnInit(): void {
     /* desde 0 muestra todos */
     this.cargarUsuarios();
+    
+    /* fijate como un EventEmitter es un Observable.Perfectamente puedo usar operadores rxjs y sólo necesito recargar los Usuarios,pero con un pequeño delay para que suba la imagen al servidor */
+    this.imgSubs = this.modalImagenService.nuevaImagen
+      .pipe(delay(100))
+      .subscribe( (data) => { 
+        if(data.id === this.usuarioService.uid){
+          this.usuario.img = data.img;
+        }
+        this.cargarUsuarios()
+      });
   }
 
+  ngOnDestroy(): void {
+    this.imgSubs.unsubscribe();
+  }
   /* metodo para cargar los usuarios y no repetir código */
   cargarUsuarios() {
     this.cargando = true;

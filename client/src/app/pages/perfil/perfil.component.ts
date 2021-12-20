@@ -66,8 +66,6 @@ export class PerfilComponent implements OnInit {
     if (!archivo.type.includes('image')) {
       return;
     }
-    
-    
     /* puedo construir una imagen temporal leyendo un blob,encriptandolo y aplicando al atributo src el resultado */
     const reader = new FileReader();
     /* el método FileReaderInstance.readerAsDataUrl(blob) empieza a leer un Blob y lo pasa a base64-Encoding */
