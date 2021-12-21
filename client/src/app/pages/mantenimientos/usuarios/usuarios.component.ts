@@ -3,7 +3,7 @@ import Swal from 'sweetalert2';
 
 import { Usuario } from 'src/app/models/usuario.model';
 
-import { BusquedasService } from 'src/app/services/busquedas.service';
+import { BusquedasService, UsuariosResponse } from 'src/app/services/busquedas.service';
 import { ModalImagenService } from 'src/app/services/modal-imagen.service';
 import { UsuarioService } from 'src/app/services/usuario.service';
 import { delay } from 'rxjs/operators';
@@ -103,7 +103,7 @@ export class UsuariosComponent implements OnInit, OnDestroy{
     }
 
     this.busquedaService.buscar('usuarios', termino, this.desdeB)
-      .subscribe((resp) => {
+      .subscribe((resp:UsuariosResponse) => {
         this.totalBusqueda = resp.total;
         this.usuarios = resp.usuarios;
       });

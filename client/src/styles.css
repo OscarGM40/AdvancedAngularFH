@@ -49,6 +49,13 @@
   width: 50px;
   object-fit: cover;
 }
+.mini-avatar-square {
+  border-radius: 5px;
+  border: 1.5px solid rgba(10, 10, 10, 0.637);
+  width: 85px;
+  height: 60px;
+  object-fit: cover;
+}
 
 .table td, .table th {
   padding: .75rem;

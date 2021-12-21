@@ -23,8 +23,6 @@ export class ModalImagenService {
   /* para informar de una nueva imagen usaremos la clase EventEmitter.Realmente puedo emitir lo que quiera.Emitiremos un string con la url de la nueva imagen */
   public nuevaImagen: EventEmitter<CheckImg> = new EventEmitter<CheckImg>();
 
-
-
   get ocultarModal(): boolean {
     return this._ocultarModal;
   }

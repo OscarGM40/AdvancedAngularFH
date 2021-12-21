@@ -510,3 +510,191 @@ En el componente llamamos al servicio,habrá que crearse una propiedad para reco
 NOTA:fijate como [(ngModel)] hace como el "value" metiendo el nombre como valor.recuerdalo,es importante.
 
 			VIDEO 219 PIPES PARA MOSTRAR LAS IMÁGENES
+
+Fijate que no hemos creado una instancia de Hospital,asi que no tengo accesos a métodos o getters a través de esa instancia.Lo que vamos a hacer es generar un pipe:
+ng g pipe pipes/imagen --skip-tests
+
+Fijate que al haberlo creado en la raiz me lo va a importar al app.module.ts.No vamos a hacer esto,pues la aplicación podria crecer mucho el día de mañana y por tanto este archivo raiz app.module tendría todos los pipes.Mejor creamos un modulo sólo para pipes y lo requerimos en cada otro modulo que vaya a usar un pipe:
+ng g m pipes/pipes --flat <- generará pipes.module.ts
+
+@NgModule({
+  declarations: [
+    ImagenPipe
+  ],
+  exports: [
+    ImagenPipe
+  ],
+})
+export class PipesModule { }
+Lo declaro y exporto.
+Recuerda que en pocas palabras un pipe me sirve para transformar la forma visual de como recibo la información.
+Es decir,yo puedo recibir un string y modificarlo(capitalizandolo,por ejemplo) pero en realidad no lo cambié,sólo a la hora de mostrarlo por la UI el usuario lo verá de esta forma,pero el string sigue siendo en minúsculas.
+
+Además,un pipe siempre implementa la interfaz PipeTransform y debe desarrollar su método transform:
+export class ImagenPipe implements PipeTransform {
+
+  transform(value: unknown, ...args: unknown[]): unknown {
+    return null;
+  }
+
+Recuerda que lo que le pase como name será el nombre a llamar para el pipe:
+@Pipe({
+  name: 'MiImagenPipe'
+})
+Ya sólo falta llamarlo,pero,ojo,recuerda que mi pipe al final lleva dos argumentos y se llama MiImagenPipe:
+ <td>{{hospital.img | MiImagenPipe:'hospitales'}}
+Esto dará la siguiente salida:
+hola mundoundefined hospitales <- cualquier argumento que falte será un undefined
+
+Creemos la lógica del pipe correctamente.No puede ser más sencillo:
+export class ImagenPipe implements PipeTransform {
+
+  transform(
+    img:string,
+    tipo:'usuarios' | 'medicos' | 'hospitales'): string {
+
+    if (img) {
+      if (img.includes('https')) { return img; }
+      return `${base_url}/upload/${tipo}/${img}`
+    } else {
+      return `${base_url}/upload/${tipo}/no-image`
+    }
+  }
+}
+IMPORTANTE:tengo dos formas para inferir el string que devuelve este pipe.La primera es SI usar corchetes en el atributo y NO usar dobles llaves en el valor:
+<img [src]="hospital.img | MiImagenPipe:'hospitales'"
+LA segunda es NO usar corchetes y SIusar dobles llaves en el atributo:
+<img src="{{hospital.img | MiImagenPipe:'hospitales'}}"
+Como puedo ver nunca va todo junto (o corchete y no llaves o llaves y no corchetes)
+
+			VIDEO 220 CRUD DEL SERVICIO Y BOTON CREAR HOSPITAL
+
+NOTA. fijate como Fernando centra con las clases text-<direction>.
+<div class="text-right d-flex justify-content-end"> 
+  <button class="btn btn-primary d-flex align-items-center justify-content-center">
+    <i class="fa fa-hospital-o fa-2x mr-2"></i>
+       Crear Hospital
+  </button>
+</div>
+
+El crud no tiene complicación alguna:
+  /* POST */
+  crearHospital(nombre: string) 
+  {
+    return this.http.post(`${base_url}/hospitales`,{ nombre }, this.headers);
+  }
+  /* PUT */
+  actualizarHospital(_id:string, nombre: string) 
+  {
+    return this.http.put(`${base_url}/hospitales/${_id}`,{nombre}, this.headers);
+  }
+  /* DELETE */
+  borrarHospital(_id:string) 
+  {
+    return this.http.delete(`${base_url}/hospitales${_id}`, this.headers);
+  }
+Recuerda que el argumento id va el primero por ser el más importante.
+
+		VIDEO 221 FUNCIONALIDAD DEL MANTENIMIENTO DE HOSPITALES
+
+NOTA.de nuevo fijate como usa text-nowrap + w100 para usarlo como min-content ó max-content.
+
+Fijate como quitar el atributo href a una <anchor> hace que pierda el cursor:pointer y se lo tengo que poner yo.
+
+Bien,ni guardar ni eliminar tienen complejidad:
+
+  guardarCambios(hospital:Hospital){
+    // console.log(hospital);
+     this.hospitalService.actualizarHospital(
+      hospital.id!, hospital.nombre)
+      .subscribe(resp => {
+        Swal.fire('Hospital actualizado', hospital.nombre, 'success');
+      }); 
+  }
+
+  eliminarHospital(hospital:Hospital){
+    console.log(hospital);
+     this.hospitalService.borrarHospital(hospital.id!)
+      .subscribe(resp => {
+        this.cargarHospitales();
+        Swal.fire('Hospital eliminado', hospital.nombre, 'success');
+      });  
+  }
+
+Pero para crear un Hospital vamos a usar Swal también,con el doble modal.
+IMPORTANTE:fijate que con Swal puedo usar inputs para recibir data.Además,perfectamente puedo trabajar en base a Promesas:
+
+async abrirSweetAlert() {
+  const valor = await Swal.fire({
+  input:'text',
+  inputPlaceholder: 'Insertar nombre del Hospital'
+  )}
+*Puedo ver que en el objeto valor siempre tengo el valor del input en el atributo value asi que puedo desestructurar:
+const  {value} = await Swal.fire... <- claro que es para un Swal que recoga un valor.
+
+Con todo esto simplemente compruebo que venga algo en el input y guardo el  nuevo hospital.
+  async nuevoHospital() {
+  
+   const { value } = await Swal.fire<string>({
+      title: 'Crear hospital',
+      text: 'Ingrese el nombre del hospital',
+      input: 'text',
+      inputPlaceholder: 'Nombre del hospital',
+      showCancelButton: true,
+      confirmButtonText: 'Crear',
+      cancelButtonText: 'Cancelar',
+      showLoaderOnConfirm: true,
+    });
+
+    if (value!.trim().length > 0) {
+      this.hospitalService.crearHospital( value!)
+        .subscribe( (resp:any) => {
+          this.hospitales.push(resp.hospital);
+        });
+    }
+Perfecto.lo último que nos falta es la parte de actualizar la imagen.Recuerda que tenemos un modalService para esto ya creado.
+
+  abrirModal(hospital:Hospital){
+    this.modalImagenService.abrirModal('hospitales', hospital.id!, hospital.img);
+  }
+
+Recuerda que en el OnInit nos suscribiamos a un EventEmitter para hacer el refresh:
+  ngOnInit(): void {
+    this.cargarHospitales();
+
+    this.modalImagenService.nuevaImagen
+      .pipe(delay(100))
+      .subscribe( (data) => {
+      this.cargarHospitales();
+    });
+
+  }
+
+							VIDEO 222 BUSQUEDA DE HOSPITALES
+
+IMPORTANTE:anteriormente si no se mandaba un valor en el input del swal de crear un hospital value toma el valor de undefined y hacer el trim a undefined tiraba la aplicación.Es tan sencillo como asignarle un valor por defecto pero fijate como el trim de undefined es un error fatal:
+const { value="" } = await Swal.fire<string>({
+    if (value!.trim().length > 0) { <- undefined.trim() es malo asinto
+
+Fijate que es buena idea crear los types necesarios.Ni siquiera van a compilar asinto:
+ buscar(termino: string) {
+
+    if (termino.length < 0) {
+      this.hospitales = this.hospitalesTemp;
+      return;
+    }
+
+    if(termino.length === 0) {
+     return this.cargarHospitales();
+    }
+
+    this.busquedaService.buscar('hospitales', termino, 0)
+      .subscribe((resp:HospitalesResponse) => {
+        this.totalBusqueda = resp.total;
+        this.hospitales = resp.hospitales;
+      });
+  }
+				
+			VIDEO 223 COMPONENTE PARA MEDICOS Y MEDICOS-SERVICE
+
+
