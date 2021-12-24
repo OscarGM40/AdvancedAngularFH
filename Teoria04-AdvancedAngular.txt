@@ -697,4 +697,57 @@ Fijate que es buena idea crear los types necesarios.Ni siquiera van a compilar a
 				
 			VIDEO 223 COMPONENTE PARA MEDICOS Y MEDICOS-SERVICE
 
+Primero creamos el modelo para el médico.Fijate que las propiedades opcionales deben ir las últimas:
+interface MedicoUser {
+  id: string;
+  nombre: string;
+  img: string;
+}
+
+interface MedicoHospital {
+  id: string;
+  nombre: string;
+  img: string;
+}
+
+export class Medico {
+
+  constructor(
+    public nombre: string,
+    public id?: string,
+    public img?: string,
+    public usuario?: MedicoUser,
+    public hospital?: Hospital,
+  ) { }
+}
+
+Adicionalmente vamos a crear un componente Medico para la ruta con el param obligatorio medico/:id.
+
+   { path:'medicos', component: MedicosComponent, data: { title: 'Mantenimiento de Medicos' } },
+   { path:'medico:/id', component: MedicoComponent, data: { title: 'Mantenimiento de Medicos' } },
+
+Fijate que perfectamente puedo tener 4 archivos en un componente,asi que meto medico.component.html y medico.component.ts en el mismo folder de medicos.Aunque no es importante y podría crear el folder semánticamente tiene mucho sentido agruparlos.
+Finalmente implemento el cascaron.txt en medicos.component.html
+
+		VIDEO 224-225 IMPLEMENTAR CRUD Y REDIRECCIONAR A MEDICO-COMPONENT
+
+Realmente implementar el Crud de nuevo es copiar y pegar.No obstante queremos redireccionar a la pantalla de médico para editarlo.
+Para redireccionar tengo varias sintaxis,pero usaré en todas ellas el routerLink de Angular:
+
+1-  <a routerLink="/dashboard/medico/{{medico.id}}"> <-forma uno todo dentro del string
+2- <a [routerLink]="['/dashboard/medico',medico.id]"> <-forma dos, con un array,lo cual implica corchetes para interpretar ese array.Además,fijate que 'medico' es un string,pero medico.id no(pero si es un string xd) 
+3- <a [routerLink]="['/dashboard','medico',medico.id]"> <- igual que la dos pero segmentando la ruta.
+
+Recuerda que la Subscription al EventEmitter para el autorefresh hay que destruirlo en el OnDestroy:
+
+ ngOnDestroy(): void {
+    if (this.imgSubs) {
+      this.imgSubs.unsubscribe();
+    }
+  }
+
+Por último creamos un botón que rediriga a /nuevo.Con este param sabŕe que quiero crear a diferencia de si es el id que será editar uno ya existente.Genial.
+
+			VIDEO 227 COMPONENTE MÉDICO - ESTRUCTURA DEL HTML
+
 

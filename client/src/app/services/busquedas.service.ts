@@ -3,12 +3,17 @@ import { Injectable } from '@angular/core';
 import { debounceTime, delay, map, tap } from 'rxjs/operators';
 import { environment } from 'src/environments/environment';
 import { Hospital } from '../models/hospital.model';
+import { Medico } from '../models/medico.model';
 import { Usuario } from '../models/usuario.model';
 
 const base_url = environment.base_url;
 
 export type HospitalesResponse = {
   hospitales:Hospital[];
+  total:number;
+}
+export type MedicosResponse = {
+  medicos:Medico[];
   total:number;
 }
 
@@ -44,6 +49,7 @@ export class BusquedasService {
   buscar(tipo: 'usuarios' | 'medicos' | 'hospitales', termino: string, desde:number) {
 
     const url = `${base_url}/todo/coleccion/${tipo}/${termino}?desde=${desde}`;
+
     return this.http.get<any[]>(url, this.headers)
       .pipe(
         debounceTime(500),
@@ -57,6 +63,10 @@ export class BusquedasService {
             case 'hospitales':
               const hospitales = resp.resultados;
               return { hospitales, total: resp.total } as HospitalesResponse;
+
+            case 'medicos':
+              const medicos = resp.resultados;
+              return { medicos, total: resp.total } as MedicosResponse;
 
             default:
               return [];

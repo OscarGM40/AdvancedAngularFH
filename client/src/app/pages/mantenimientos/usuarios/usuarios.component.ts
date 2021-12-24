@@ -27,8 +27,6 @@ export class UsuariosComponent implements OnInit, OnDestroy{
   public cargando: boolean = true;
   public totalBusqueda: number = 0;
   public usuario!: Usuario;
-
-
   public imgSubs!: Subscription;
 
   constructor(

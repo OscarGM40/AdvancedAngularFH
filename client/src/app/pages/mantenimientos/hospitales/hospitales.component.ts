@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { delay, } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
@@ -8,6 +8,7 @@ import { Hospital } from 'src/app/models/hospital.model';
 import { BusquedasService, HospitalesResponse } from 'src/app/services/busquedas.service';
 import { HospitalService } from 'src/app/services/hospital.service';
 import { ModalImagenService } from 'src/app/services/modal-imagen.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-hospitales',
@@ -15,13 +16,13 @@ import { ModalImagenService } from 'src/app/services/modal-imagen.service';
   styles: [
   ]
 })
-export class HospitalesComponent implements OnInit {
+export class HospitalesComponent implements OnInit,OnDestroy {
 
   public hospitales:Hospital[] = [];
   public hospitalesTemp:Hospital[] = [];
   public cargando:boolean = true;
   public totalBusqueda: number = 0;
-  // private imgSubs!: Subscription;
+  private imgSubs!: Subscription;
 
   constructor(
     private hospitalService:HospitalService,
@@ -32,12 +33,17 @@ export class HospitalesComponent implements OnInit {
   ngOnInit(): void {
     this.cargarHospitales();
 
-    this.modalImagenService.nuevaImagen
+    this.imgSubs = this.modalImagenService.nuevaImagen
       .pipe(delay(100))
       .subscribe( (data) => {
       this.cargarHospitales();
     });
-
+  }
+  
+  ngOnDestroy(): void {
+    if (this.imgSubs) {
+      this.imgSubs.unsubscribe();
+    }
   }
 
   cargarHospitales(){
@@ -51,7 +57,6 @@ export class HospitalesComponent implements OnInit {
   } 
 
   guardarCambios(hospital:Hospital){
-    // console.log(hospital);
      this.hospitalService.actualizarHospital(
       hospital.id!, hospital.nombre)
       .subscribe(resp => {
@@ -60,12 +65,26 @@ export class HospitalesComponent implements OnInit {
   }
 
   eliminarHospital(hospital:Hospital){
-    console.log(hospital);
-     this.hospitalService.borrarHospital(hospital.id!)
-      .subscribe(resp => {
-        this.cargarHospitales();
-        Swal.fire('Hospital eliminado', hospital.nombre, 'success');
-      });  
+    Swal.fire({
+      title: 'Borrar hospital?',
+      text: `Esta seguro que desea borrar a ${hospital.nombre}`,
+      icon: 'question',
+      showCancelButton: true,
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Si, borrarlo!',
+      confirmButtonColor: '#3085d6',
+    }).then((result) => {
+      if (result.value) {
+        this.hospitalService.borrarHospital(hospital.id!)
+          .subscribe(() => {
+            Swal.fire(
+              'Hospital borrado',
+              `${hospital.nombre} ha sido eliminado correctamente`,
+              'success');
+            this.cargarHospitales();
+          });
+      };
+    })
   }
 
   async nuevoHospital() {
