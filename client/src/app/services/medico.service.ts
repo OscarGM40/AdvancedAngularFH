@@ -27,15 +27,20 @@ export class MedicoService {
     }
   }
   
-  /* GET */
+  /* GET ALL */
   cargarMedicos() {
     return this.http.get(`${base_url}/medicos`, this.headers).pipe(
       map<any, Medico[]>((resp: { ok: boolean, medicos: Medico[]}) => resp.medicos));
   }
+  /* GET ONE */
+  cargarMedico(id: string) {
+    return this.http.get(`${base_url}/medicos/${id}`, this.headers).pipe(
+      map<any, Medico>((resp: { ok: boolean, medico: Medico}) => resp.medico));
+  }
   
   /* POST */
-  crearMedico(medico:Medico ) {
-    return this.http.post(`${base_url}/medicos`,  medico , this.headers);
+  crearMedico(medico:{nombre:string,hospital:string} ) {
+    return this.http.post(`${base_url}/medicos`,medico,this.headers);
   }
   
   /* PUT */

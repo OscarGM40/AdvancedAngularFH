@@ -42,6 +42,13 @@
   width: 100px;
 }
 
+.w300 {
+  width: 300px;
+  height: 250px;
+  object-fit: cover;
+}
+
+
 .mini-avatar {
   border-radius: 50%;
   border:.5px solid rgba(10, 10, 10, 0.637);

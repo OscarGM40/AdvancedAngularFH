@@ -750,4 +750,200 @@ Por último creamos un botón que rediriga a /nuevo.Con este param sabŕe que qu
 
 			VIDEO 227 COMPONENTE MÉDICO - ESTRUCTURA DEL HTML
 
+Copiamos el formulario que nos indica Fernando y lo editamos según la necesidad en el componente.Fijate que queremos ver la imagen del hospital según seleccionemos una opción en el select.Aparte también queremos ver el avatar del médico.
+
+				 VIDEO 228 PREPARAR FORMULARIO NUEVO MÉDICO
+
+Fijate que para controlar un campo tipo select el formControlName va en el <select>.Aparte hay que dar un value a cada <option>,como siempre:
+
+ <select class="form-control" id="hospital" formControlName="hospital">
+       <option selected disabled>Seleccione un hospital </option>
+       <option value="1">Hospital 1</option>
+       <option value="2">Hospital 2</option>
+       <option value="3">Hospital 3</option>
+</select>
+
+Fijate que hasta ahora nunca habia metido la declaración del FormBuilder en el ngOnInit,entiendo que es para asegurarse que se carga todo el DOM.Sea como sea se confirma que hay varios sitios donde iniciarlo:
+
+   ngOnInit(): void {
+      this.medicoForm = this.formBuilder.group({
+        nombre: ['Hernando',Validators.required],
+        hospital: ['2', [Validators.required]],
+      });
+    }
+
+También confirmo que puedo llamar a los eventos en la template con la sintaxis (ngEvent) o (evento).Ejemplo:
+  <form class="form-horizontal p-t-20" [formGroup]="medicoForm" (submit)="guardarMedico()"> <- también puedo usar (ngSubmit)="guardarMedico"
+
+NOTA:realmente poblar el select va a ser sencillo.En el ngOnInit llamo a un endpoint que traiga los hospitales.Despues uso un *ngFor:
+<option value="" selected  disabled>Seleccione un hospital</option>
+  <option *ngFor="let hospital of hospitales"[value]="hospital.id">{{hospital.nombre}}</option>
+
+Fijate como rescataré el id como valor.Perfecto.Esa primera opcion debo darle un value que haga match en el formBuilder:
+<option value=""> <- un string vacio como valor por defecto
+medicoForm:FormGroup = this.fg.group({
+  nombre:[],
+  hospital:['',Validatorrs...] <- le paso un string vacio que hace match con value="".Genial
+
+Además ese string vacio chocará con Validators.required asi que es una muy buena idea.
+
+			VIDEO 229 MOSTRAR INFORMACIÓN DEL HOSPITAL SELECCIONADO
+
+Queremos que al cambiar la <option> del hospital se vea su imagen respectiva.Hay varias maneras de afrontar esto.Veamos la de Fernando.
+
+NOTA:recuerda que en Angular puedo suscribirme al cambio de un campo(me da igual el tipo) con la propiedad valueChanges(a aplicar sobre un control).Esta propiedad es un Observable!:
+
+this.medicoForm.get('hospital').valueChanges.subscribe( (id:string) => console.log(id) ) <- en este caso sé que me viene el id desde el value de cada option.
+
+Simplemente sería cargar la imagen de ese hospital.Fijate que cuando quiera buscar una ocurrencia es mejor usar find(en Javascript find devuelve el primer elemento que cumpla la condición y para,mientras que filter iterará sobre todos los elementos):
+
+  this.medicoForm.get('hospital')!.
+        valueChanges
+        .subscribe( (id:string) => {
+          // console.log(id);
+          /* usamos find porque es más eficiente que el filter ya que cuando encuentre uno para mientras que filter barrerá todo el arreglo */
+        this.hospitalSeleccionado = this.hospitales.find(hospital => hospital.id === id);
+      });
+
+NOTA: array.every(predicate) aplica una condición a todo el arreglo y devuelve true si todos la satisfacen o false si uno o más no la satisfacen
+Array.from(iterable,map?) permite crear un array a partir de ese iterable.Se le puede pasar una función map antes de crearlo.Ejemplo:
+let arr = Array.from('foo') <- creará ['f','o','o']
+lete arr2 = Array.from([1,2,3],x=>x*2); <- creará [2,4,6]
+Array.slice(inicio,fin?) se usa para recortar.Devuelve un nuevo array y no muta el anterior,luego terminaré con dos arrays
+Array.splice(start,deleteElements?:number,[elementsToInsert]) permite tanto recortar un array como agregarle elementos en una posicion concreta.Lamentablemente muta el array original.Con deleteElements como 0 no borrará,solo inserta:
+var arr = [1,3,4,5]
+var arrMuted = arr.splice(1,0,2) <- en la posicion 1,borras 0 e insertas el 2
+resultado => [1,2,3,4,5] 
+var months = ['January','February','March','March']
+var monthsMuted = months.splice(3,1,'April') <- en la posicion 3 recortas uno e insertas 'April.Resultado: ['January','February','March','April']
+Por último array.some es como array.every,pero devuelve true si UNO ya la cumple,a diferencia de every que la deben de cumplir todos.
+Recuerda que también está findIndex(predicate) e indexOf(element) y lastIndexOf(element).El primero necesita una condición,los otros dos necesitan el elemento, o algo que se resuelva a ese elemento.Sigamos con el video:
+
+Realmente ya está todo,en cada cambio tengo en esa propiedad de tipo Hospital el hospital activo luego puedo hacer esto:
+
+   <h4 class="card-title">Hospital Seleccionado</h4>
+        <h6 class="card-subtitle">{{ hospitalSeleccionado?.nombre }}</h6>
+
+        <img [src]="hospitalSeleccionado?.img | MiImagenPipe:'hospitales' "
+          class="img-responsive img-thumbnail w300" />
+
+				VIDEO 230 CREAR MÉDICO EN LA BASE DE DATOS 
+
+Fijate como en cuanto se complica un poco la cosa hay que usar propiedades estilo medicoActive,etc...
+
+  /* recuerda que una propiedad no inicializada a un valor estará como undefined */
+  public hospitalSeleccionado!:Hospital | undefined;
+  public medicoSeleccionado!:Medico | undefined;
+
+Esto sería el tipico const [medico,setMedico]= useState() 
+En base a si tengo un médico seleccionado pintamos el avatar...
+    <!-- avatar -->
+          <div class="form-group row"
+            *ngIf="medicoSeleccionado">
+
+Realmente guardar el médico no es complejo,en el submit apuntamos al servicio que hará la petición:
+  guardarMedico(){
+      // console.log(this.medicoForm.value);
+       this.medicoService.crearMedico(this.medicoForm.value)
+        .pipe()
+        .subscribe( (resp:any) => {
+          // console.log(resp);
+            Swal.fire("Médico Creado!", `Médico ${resp.medico.nombre} creado con éxito`, "success");
+            this.router.navigate(['/dashboard','medicos',resp.medico.id]);
+        }); 
+    }
+
+					VIDEO 231 CARGAR UN MÉDICO 
+
+Fijate que nos dejamos el getMedico y getHospital,sólo devolvemos todos.Tenemos que crear la ruta y el controlador para el getMedico(parece que no hará falta obtener un Hospital):
+
+exports.getMedico = async (req, res = response) => {
+  const medico = await Medico.findById(req.params.id)
+    .populate("usuario", "nombre email img")
+    .populate("hospital", "nombre img");
+
+  res.json({
+    ok: true,
+    medico,
+  });
+};
+
+Bien,esto no es importante.Fijate que voy a necesitar suscribirme a la ruta,es decir,tengo que saber si estoy en /nuevo o en /:id.Para ello necesito inyectar la clase ActivatedRoute.Y para suscribirme a la ruta,es decir a cada cambio en ella:
+
+constructor( private activatedRoute:ActivatedRoute){}
+
+this.activatedRoute.params.subscribe( params => console.log(params));
+
+Fijate que siempre voy a tener el param 'id',solo que si es nuevo estoy en crear y si es un id estoy en editar.Interesante:
+{id: 'nuevo'}
+Esto tiene sentido ya que la ruta es:
+  { path:'medico/:id', component: MedicoComponent, data: { title: 'Mantenimiento de Medicos' } },
+
+Bien,queda claro que siempre tenemos el param.id luego:
+
+  /* para suscribirme a los cambios en la ruta actual tengo que usar la clase ActivatedRoute.Varias de sus propiedades son Observables a los que suscribirse */
+      this.activatedRoute.params.subscribe( (params:Params) => {
+        const id = params.id;
+        this.cargarMedico(id);
+      });
+En el siguiente video veremos éste método cargarMédico.
+
+				VIDEO 232 ACTUALIZAR UN MÉDICO SELECCIONADO
+
+Realmente es muy fácil repoblar el formulario,ya que lo tengo en la propiedad medicoForm.Con el método setValues le puedo asignar valores.Genial.
+Con todo esto llamo al servicio y asigno valores al formulario,además de las propiedades para los activos.Fijate que gran idea fue crear medicoSeleccionado y hospitalSeleccionado.
+
+   cargarMedico(id: string){
+      this.medicoService.cargarMedico(id)
+        .subscribe( (medico:Medico) => {
+          this.medicoSeleccionado = medico;
+          this.medicoForm.setValue({
+            nombre: medico.nombre,
+            hospital: medico.hospital!.id
+        });
+        this.hospitalSeleccionado = medico.hospital;
+        });
+   }
+
+Aún nos falta comprobar que exista el médico:
+  cargarMedico(id: string) {
+    this.medicoService.cargarMedico(id)
+      .subscribe((medico: Medico) => {
+        
+        if(!medico) {
+          this.router.navigate(['/dashboard','medicos']);
+          return;
+        }
+Fijate que puedo usar navigate y construir la ruta yo o usar navigateByUrl('7dashboard/medicos') y pasarle la ruta construida.Con ambos puedo pasar variable por la ruta o usar rutas dinámicas.
+
+Fijate que tuve que usar un segundo argumento en el subscribe:
+ cargarMedico(id: string) {
+      if (id === "nuevo") {
+        return;
+      }
+      this.medicoService.cargarMedico(id)
+      .subscribe((medico: Medico) => {
+        this.medicoSeleccionado = medico;
+        this.medicoForm.setValue({
+          nombre: medico.nombre,
+          hospital: medico.hospital!.id
+        });
+        this.hospitalSeleccionado = medico.hospital;
+      },error =>{
+          return this.router.navigateByUrl('/dashboard/medicos') 
+      });
+    }
+
+		VIDEO 233 CARGAR IMAGEN DEL HOSPITAL AL ENTRAR EN EDITAR MEDICO
+
+Fijate que puedo implementar el abrir modal en la sección de editar.Además Fernando recalca que al usar Observables como activatedRoute.params no necesito getionar la desuscripción:
+ActivedRoute a través del router se encarga de destruir el componente cuando ya no es necesario y el ActivatedRoute muere con el
+
+Por último hago el backup de la sección y el tag,ya que hicimos bastantes cambios.Pero antes cambiar el modal.
+NOTA: las imagenes y videos no hace falta darles seguimiento con git:
+en el gitignore:
+uploads/hospitales/**.jpg
+uploads/hospitales/**.png
+uploads/hospitales/**.gif
+Lo mismo para el resto.Buscar mejor forma de ignorar los assets.
 
