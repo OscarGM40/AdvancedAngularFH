@@ -42,7 +42,16 @@ export class BusquedasService {
 
   private transformarUsuarios(resultados: any[]): Usuario[] {
     return resultados.map(
-      user => new Usuario(user.nombre, user.email, '',user.img, user.google,user.role, user.uid)
+      user => new Usuario(
+        user.nombre,
+        user.email,
+         '',
+        user.img,
+        user.google,
+        user.role,
+        user.uid,
+        user.id,
+        user.isActive)
     );
   }
 
@@ -75,7 +84,18 @@ export class BusquedasService {
       );
   }
 
-
+  busquedaGlobal(termino:string){
+    const url = `${base_url}/todo/${termino}`;
+    return this.http.get<any[]>(url, this.headers)
+      .pipe(
+        map<any, any>( (resp) => {
+          const usuarios = this.transformarUsuarios(resp.usuarios);
+          const hospitales = resp.hospitales;
+          const medicos = resp.medicos;
+          return { usuarios, hospitales, medicos } as any;
+        })
+      );
+  };
 
 }
 

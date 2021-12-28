@@ -51,7 +51,7 @@ export class PerfilComponent implements OnInit {
       (error) => 
       {
         console.log(error);
-        Swal.fire('Error', error.error.msg, 'error');
+        Swal.fire('Error', error.error.mensaje, 'error');
       });
   }
 
@@ -87,8 +87,8 @@ export class PerfilComponent implements OnInit {
       Swal.fire('Guardado', 'Avatar actualizado', 'success');
     })
     .catch((error) => {
-      console.log(error);
-      Swal.fire('Error', error.error.msg, 'error');
+      console.log(error.error);
+      Swal.fire('Error', error.error.mensaje, 'error');
       });
   }
 

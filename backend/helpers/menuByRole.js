@@ -1,19 +1,7 @@
-import { Injectable } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class SidebarService {
-   public menu:any = [];
-
-   cargarMenu() {
-     this.menu = localStorage.getItem('menu') 
-       ? JSON.parse(localStorage.getItem('menu')!) 
-       : [];
-      return this.menu;
-   }
-
-/*   menu: any[] = [
+exports.getMenuOfFrontend = (role="USER_ROLE") =>{
+  
+  const menu = [
     { 
       titulo:'Dashboard',
       icono:'mdi mdi-gauge', 
@@ -29,12 +17,15 @@ export class SidebarService {
       titulo:'Mantenimientos',
       icono:'mdi mdi-folder-lock-open',
       submenu:[
-        {titulo:'Usuarios', url:'usuarios'},
+        // {titulo:'Usuarios', url:'usuarios'},
         {titulo:'Hospitales', url:'hospitales'},
         {titulo:'Medicos', url:'medicos'},
       ]
     }
-  ] */
-  
-  constructor() { }
+  ]
+
+  if(role==="ADMIN_ROLE"){
+    menu[1].submenu.unshift({titulo:'Usuarios', url:'usuarios'})
+  }
+  return menu;
 }

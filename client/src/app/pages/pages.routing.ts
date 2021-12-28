@@ -17,6 +17,8 @@ import { UsuariosComponent } from './mantenimientos/usuarios/usuarios.component'
 import { HospitalesComponent } from './mantenimientos/hospitales/hospitales.component';
 import { MedicosComponent } from './mantenimientos/medicos/medicos.component';
 import { MedicoComponent } from './mantenimientos/medicos/medico.component';
+import { BusquedaComponent } from './busqueda/busqueda.component';
+import { AdminGuard } from '../guards/admin.guard';
 
 
 
@@ -27,45 +29,38 @@ const routes: Routes = [
       canActivate: [AuthGuard],
       children: [
          {
-            path: '', component: DashboardComponent, data: {
-               title: 'Dashboard',
-            }
+            path: '', component: DashboardComponent, data: { title: 'Dashboard', }
          },
          {
-            path: 'progress', component: ProgressComponent, data: {
-               title: 'Gráfica ProgressBar',
-            }
+            path: 'account-settings', component: AccountSettingsComponent, data: { title: 'Ajustes de Tema', }
          },
          {
-            path: 'grafica-dona', component: Grafica1Component, data: {
-               title: 'Gráfica Dona | Donought',
-            }
+            path: 'busqueda/:termino', component: BusquedaComponent, data: { title: 'Busqueda', }
          },
          {
-            path: 'account-settings', component: AccountSettingsComponent, data: {
-               title: 'Ajustes de Tema',
-            }
+            path: 'grafica-dona', component: Grafica1Component, data: { title: 'Gráfica Dona | Donought', }
          },
          {
-            path: 'promesas', component: PromesasComponent, data: {
-               title: 'Promesas Custom',
-            }
+            path: 'perfil', component: PerfilComponent, data: { title: 'Perfil Usuario', }
          },
          {
-            path: 'rxjs', component: RxjsComponent, data: {
-               title: 'Operadores RxJs Y Observables Custom',
-            },
+            path: 'promesas', component: PromesasComponent, data: { title: 'Promesas Custom', }
          },
          {
-            path: 'perfil', component: PerfilComponent, data: {
-               title: 'Perfil Usuario',
-            }
+            path: 'progress', component: ProgressComponent, data: { title: 'Gráfica ProgressBar', }
+         },
+         {
+            path: 'rxjs', component: RxjsComponent, data: { title: 'Operadores RxJs Y Observables Custom', },
          },
          /* mantenimientos === CRUD por colección data es para las breadcrumbs   */
-         { path:'usuarios', component: UsuariosComponent, data: { title: 'Mantenimiento de Usuarios' } },
          { path:'hospitales', component: HospitalesComponent, data: { title: 'Mantenimiento de Hospitales' } },
          { path:'medicos', component: MedicosComponent, data: { title: 'Mantenimiento de Medicos' } },
          { path:'medico/:id', component: MedicoComponent, data: { title: 'Mantenimiento de Medicos' } },
+         /* rutas Admin | User */
+         { path:'usuarios',
+            canActivate:[AdminGuard],
+            component: UsuariosComponent,
+            data: { title: 'Mantenimiento de Usuarios' } },
       ]
    }];
 

@@ -68,8 +68,8 @@ exports.crearUsuario = async (req = request, res = response) => {
 };
 
 exports.actualizarUsuario = async (req = request, res = response) => {
-  // TODO validar token
   const uid = req.params.id;
+  
   const { nombre, email, password, role } = req.body;
 
   try {

@@ -1,0 +1,282 @@
+				SECCION 18 PROTECCION DE RUTAS,ROLES Y BUSCADOR
+
+En esta sección tocaremos los siguientes temas:
+
+1- Componente de búsqueda global
+2- Menú del lado del servidor
+3- AdminGuard - Un guard para verificar si es administrador
+4- Recuperar información del TOKEN desde el front-end sin comunicación intermedia
+5- Página 404
+6- Manejo de errores
+
+Al finalizar, su respectivo backup
+
+						VIDEO 238 BUSQUEDA GLOBAL
+
+En la navbar tenemos un icono de una lupa que despliega un input.Queremos realizar una busqueda de cualquier documento(ya tenemos el endpoint).Fijate que el input esta en el header.component.ts y que hace un hard refresh el form.¿Porqué?
+Porque no tengo implementado ningun modulo de manejo de formularios.Fijate que esto es importante,en cuanto vea que un form hace refresh es porque tengo que importar algun modulo para forms.
+NOTA:pudiera ser que tenga que bajar el ng serve para que tome efecto.
+
+Para algo tan simple usamos el formModule y una ref local:
+<form (submit)="buscar(txtTermino.value)">
+ <input #txtTermino type...>
+
+				VIDEO 239 COMPONENTE PARA BUSQUEDAS GLOBALES
+
+Vamos a crear un componente que reciba el término introducido por la url y despues realize la busqueda.Obviamente primero hay que mandarlo asi que tras rescatarlo lo mando a una nueva url:
+<form (submit)="buscar(txtTermino.value)">
+<input #txtTermino ...>
+
+buscar(termino:string){
+  this.router.navigate(['/dashboar','busqueda',termino);
+} 
+Ya está mandado,ahora falta rescatarlo.La ruta será dinámica,con un param obligatorio:
+path:'busqueda/:termino',component:BusquedaComponent <- creo ese componente
+ng g c pages/busqueda --skip-test -is
+
+Y para rescatarlo no necesito la clase Router sino la clase ActivatedRoute.Memoriza que no son las mismas clases,una para mandar y otra para recibir:
+
+* En el BusquedaComponent,o el que vaya a recibir el :param hay que suscribirse al Observable this.activatedRoute.params(lo tengo también en this.activatedRoute.snapshot pero es estático y desde el mismo componente podría buscar y no lo vería desde la snapshot si no cambia la url):
+
+constructor( private activatedRoute:ActivatedRoute){}
+  ngOnInit(): void {
+    this.activatedRoute.params .subscribe(params => { console.log(params.termino);
+      });
+  }
+NOTA:también puedo usar navigateByUrl(`/dashboard/busqueda/${termino}` ó navigateByUrl("/dashboard/busqueda"+termino);
+
+En cuanto a la pagina serán tres simples cards,una por colección,con una tabla sobre la que iteraremos.
+
+				VIDEO 240 MOSTRAR LA INFORMACIÓN DE BUSQUEDA
+
+Dado que ya tenemos el endpoint simplemente creo un servicio:
+ busquedaGlobal(termino:string){
+    const url = `${base_url}/todo/${termino}`;
+    return this.http.get<any[]>(url, this.headers)
+      .pipe(
+        map<any, any>( (resp) => {
+          const usuarios = this.transformarUsuarios(resp.usuarios);
+          const hospitales = resp.hospitales;
+          const medicos = resp.medicos;
+          return { usuarios, hospitales, medicos } as any;
+        })
+      );
+  };
+
+Y lo llamo en ese Observable.Fijate que para no anidar dos Observables puedo sacar la logica a un método:
+ ngOnInit(): void {
+    this.activatedRoute.params.subscribe(params => {
+      this.busquedaByTermino(params['termino']);
+      });
+  }
+
+
+  busquedaByTermino(termino: string) {
+    this.busquedasService.busquedaGlobal(termino)
+    .subscribe( (resp) => {
+      this.usuarios = resp.usuarios;
+      this.medicos = resp.medicos;
+      this.hospitales = resp.hospitales;
+      });
+  }
+
+Fijate que tener una busqueda de este tipo da un aspecto muy profesional a la aplicación aparte de ayudar mucho al usuario a encontrar cualquier cosa.Implementar este tipo de busqueda global es fundamental.
+
+				VIDEO 241 MENU DEL LADO DEL SERVIDOR
+
+Fernando quiere retornar la composición del menú del lado del servidor.Cuando el usuario haga login puedo ver si es admin o un user normal y en base a eso retornar una estructura de menú u otra.
+Si no es un administrador realmente no debería poder usar los mantenimientos,en esta aplicación realmente un usuario puede crear médicos y hospitales,tal como lo pensó Fernando,asi que un admin puede editar usuarios y un usuario menos esta opción puede acceder a todo:
+
+export const getMenuOfFrontend = (role="USER_ROLE") =>{
+  
+  const menu = [
+    { 
+      titulo:'Dashboard',
+      icono:'mdi mdi-gauge', 
+      submenu:[
+        {titulo:'Main', url:'/'},
+        {titulo:'GraficaDona', url:'grafica-dona'},
+        {titulo:'ProgressBar', url:'progress'},
+        {titulo:'Promesas', url:'promesas'},
+        {titulo:'Rxjs', url:'rxjs'},
+      ]
+    },
+    {
+      titulo:'Mantenimientos',
+      icono:'mdi mdi-folder-lock-open',
+      submenu:[
+        // {titulo:'Usuarios', url:'usuarios'},
+        {titulo:'Hospitales', url:'hospitales'},
+        {titulo:'Medicos', url:'medicos'},
+      ]
+    }
+  ]
+
+  if(role==="ADMIN_ROLE"){
+    menu[1].submenu.unshift({titulo:'Usuarios', url:'usuarios'})
+  }
+  return menu;
+}
+
+Ahora simplemente lo devuelvo en el register,en el login y en el renew,por si cambiara.Apenas es añadir una propiedad más con la llamada al método helper.:
+
+* En cada respuesta lo mando
+  res.json({
+    ok: true,
+    token,
+    usuario:user,
+    menu: getMenuOfFrontend(user.role),
+  });
+Como puedo ver no es nada dificil mandar un menu desde el backend y crear menus dinámicos en base al rol del usuario.
+
+			VIDEO 242 CARGAR EL MENU DESDE EL SERVICE DEL FRONTEND
+
+Realmente el menú no es información sensible,puedo incluso grabarlo en el localStorage.¿Dondé?Pues donde estaba guardando el token ahora guardo el menu también(fijate que es un arreglo luego hay que serializarlo):
+
+* Mejor crear un pequeño método para no repetir las instrucciones.
+  guardarLocalStorage(token:string,menu:[]) {
+    localStorage.setItem('token', token);
+    localStorage.setItem('menu', JSON.stringify(menu));
+  }
+
+IMPORTANTE: fijate como estabamos cargando una propiedad del servicio(y utilizando la capacidad de ser singleton un servicio de Angular):
+
+export class SidebarService {
+   public menu = [];
+
+   cargarMenu() {
+     this.menu = localStorage.getItem('menu') 
+       ? JSON.parse(localStorage.getItem('menu')!) 
+       : [];
+      return this.menu;
+   }
+Yo no tengo porque usar un servicio SOLO PARA PETICIONES.Puedo devolver una propiedad cualquiera,en este caso devuelvo una propiedad menu,de donde lo cargue es indiferente,del localStorage,de un backend,...
+Lo importante es que este servicio devuelve una propiedad.Ahora bien,¿cuando la cargo?.
+Puedo seguir con la forma que tenia,iterando sobre el menu y cargandolo en el sidebar.component,claro que para cargarlo ahora tengo que llamar al método:
+ public menuItems: any[] ;
+  constructor(
+    private sidebarService: SidebarService,
+    private usuarioService: UsuarioService,
+    ) { 
+    this.menuItems = this.sidebarService.cargarMenu();
+  }
+Sin embargo,aqui viene lo importante,fijate que yo puedo declarar una propiedad en un servicio y despues distribuirla por la app simplemente con this.menuItems = this.sidebarService.menu(ahora es un método que devuelve la propiedad).
+
+Sin embargo,Fernando sugiere llamar al método ya desde el pagesComponent(pues es una página con autenticación(con el canActivate).Me parece una buena idea.
+
+En el pagesComponent...
+  constructor(
+    private settingsService: SettingsService,
+    private sidebarService:SidebarService
+    ) {} 
+
+   ngOnInit(): void {
+    this.sidebarService.cargarMenu();
+    customInitFunctions();
+  }
+
+Fijate que llamar a this.sidebarService.cargarMenu() hace que pueda usar this.sidebarService.menu.Asi que si ya lo tengo cargado no necesito hacerlo en el sidebarComponent:
+ <li *ngFor="let item of sidebarService.menu">
+
+Obviamente tendré que añadir el servicio como público,ya que lo uso en la template.
+NOTA:para que menu no me dé de tipo never[] lo debo declarar como menu:any=[] y no como menu=[];
+También hay que purgar el menu en el logout:
+  logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('menu');
+NOTA:fijate que un usuario normal no va a ver la opción del mantenimiento de usuarios más,pero AÚN PUEDE ACCEDER POR LA URL.Esto hay que controlarlo con un Guard.
+
+					VIDEO 243 ADMIN GUARD
+
+Fijate que ya tengo un guard que mira si el usuario está autenticado en cada ruta a través de un método que retorna un boleano:
+ canActivate(
+    route: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot) {
+    
+      return this.usuarioService.validarToken()
+      .pipe( tap(estaAutenticado => {
+        if (!estaAutenticado) {
+          this.router.navigateByUrl('/login');
+        }
+      }));
+  }
+Esto es un guard,un simple boleano.Luego falta implemnentar en las rutas que quiera el guard que quiera.Asi que crearemos un guard que retorne true si el usuario es admin y false si es un usuario normal.
+También voy al usuarioService y creo un getter para obtener el role:
+
+  get role():'ADMIN_ROLE'|'USER_ROLE' {
+    return this.usuario.role!;
+  }
+Aunque me hará cambiar la interfaz es mejor definir los posibles roles que pasar un string(o crearse una enum).
+
+En el CanActivate escribo la lógica:
+ if (this.usuarioService.role === 'ADMIN_ROLE') {
+      return true;
+    } else {
+      console.log('Bloqueado por el admin guard');
+      this.usuarioService.logout();
+      return false;
+    }
+ 
+Ahora puedo implementar esta protección en la ruta o rutas que quiera:
+{ path:'usuarios',
+  canActivate:[AdminGuard],
+  component: UsuariosComponent,
+Debe ser un arreglo de Guards,aunque sea sólo uno.
+Al final podemos hacer lo que queramos pero seguiré lo que hace Fernando y redireccionaré a simplemente /dashboard.
+
+				VIDEO 244 VALIDAR EL ADMIN_ROLE EN EL BACKEND
+
+Realmente ahora mismo cualquier usuario puede cambiarse el rol,esto no debería de poder realizarse.Solo un ADMIN puede cambiar los roles.Hagamoslo en el server.Realmente es bastante sencillo dado el orden de los middlewares:
+
+const validarAdminRole = async (req= request, res = response, next)=> {
+  const uid = req.uid;
+  try {
+    const usuario = await Usuario.findById(uid);  
+    
+    if(!usuario) {
+      return res.status(401).json({
+        ok: false,
+        mensaje: "El usuario no existe",
+      });
+    }
+
+Protegemos sólo el put:
+router.put(
+  "/:id",
+  [
+    validarToken,
+    validarAdminRole,
+
+Claro que ahora el usuario normal no puede actualizar su perfil.Falta especificar que si es el propio usuario puede actualizar su perfil(pero no su rol)
+
+			VIDEO 245 VALIDAR SI ES EL MISMO USUARIO O UN ADMIN
+
+ Falta validar que sea el mismo usuario.Hay que cambiar un poco el middleware:
+  if (usuario.role === "ADMIN_ROLE" || usuario.id === id) {
+     next()}else{
+       return res.status(401).json({
+         ok: false,
+         mensaje: "No tiene permisos para realizar esta acción",
+       });
+     }
+}
+
+			SECCION 19 OPTIMIZACIONES-LAZY LOAD Y DESPLIEGUE
+
+Esta sección esta orientada a realizar optimizaciones en nuestra aplicación y back-end:
+
+1- Lazyload
+2- Función para renovar el token
+3- Guard de renovación de token
+4- Leer el token localmente sin comunicación con el servidor
+5- Optimizar el tiempo de renovación de token
+6- Resolver problema con las imágenes mal ubicadas en la versión de distribución
+7- Crear la versión de distribución
+
+Al finalizar, el respectivo backup en Git y GitHub, pero adicionalmente tendremos el código fuente final del AdminPro y el Back-end Server
+
+						VIDEO 250 LAZYLOAD
+
+
+
+
