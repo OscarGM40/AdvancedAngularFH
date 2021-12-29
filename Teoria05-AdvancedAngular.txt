@@ -277,6 +277,32 @@ Al finalizar, el respectivo backup en Git y GitHub, pero adicionalmente tendremo
 
 						VIDEO 250 LAZYLOAD
 
+La carga perezosa se usa mucho.Ionic lo hace continuamente.Yo puedo usar lazy load cuando tengo muchos módulos,y quiero que sean cargados bajo demanda(y no todos desde un principio).
+Esto es muy eficiente,además los cacheará y sólo se cargarán una vez,y bajo demanda.
+Vamos a necesitar un nuevo modulo para esto:
+ng g m pages/childRoutes --flat
 
+NOTA:para implementar una carga perezosa siempre es con la propiedad 
+loadChildren: () =>
+Y es una funcion la cual usará la keyword import(ruta).then(clase):
 
+ loadChildren: () => import('./child-routes.module').then(m => m.ChildRoutesModule)
+Importará bajo demanda desde esa ruta esa clase/modulo que debe ser un modulo con rutas,claro.
+Y esa clase/módulo que estoy importando bajo demanda tendrá que hacer uso del RouterModule:
+@NgModule({
+  imports: [ RouterModule.forChild(routes) ],
+  exports: [ RouterModule ]
+})
+export class ChildRoutesModule { } importará hacia si mismo las rutas y despues las ofrece al resto.Esto es asi por motivos obvios.
+Con lo que he hecho deberia cargarse el login y register la primera vez y cargarse tras el login este childRoutes.Lo puedo ver en Networking
+
+			VIDEO 251 DESPLEGAR BACK+FRONT A UN SERVIDOR
+
+Puedo usar varios hostings como Heroku o Vercel para desplegar mi APP.Dado que tengo un backend de Node no puedo usar GitHubPages o Netlify.
+Usaremos Heroku.AL desplegar una app NOde en Heroku debo configurar el script 'start'.Dado que ellos no tienen nodemon en su server arrancaré con node index.js:
+
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js"
+  },
 
