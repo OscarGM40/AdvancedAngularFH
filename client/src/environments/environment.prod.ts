@@ -1,6 +1,5 @@
 
 export const environment = {
   production: true,
-  // TODO poner la URL de producción
-  base_url: 'https://localhost:8070/api',
+  base_url: 'https://hospitals-admin-angular-app.herokuapp.com/api' 
 };

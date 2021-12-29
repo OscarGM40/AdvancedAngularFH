@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const { dbConnection } = require('./database/dbconfig');
 const cors = require('cors');
+const path = require('path');
 
 // Initializations
 const app = express();
@@ -21,6 +22,9 @@ app.use('/api/login',require('./routes/auth.routes'))
 app.use('/api/todo',require('./routes/busquedas.routes'))
 app.use('/api/upload',require('./routes/uploads.routes'))
 
+app.get('*',(req,res)=> {
+    res.sendFile(path.join(__dirname,'public/index.html'));
+});
 
 
 

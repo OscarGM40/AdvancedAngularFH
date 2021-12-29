@@ -305,4 +305,58 @@ Usaremos Heroku.AL desplegar una app NOde en Heroku debo configurar el script 's
     "dev": "nodemon index.js",
     "start": "node index.js"
   },
+Ahora hay que iniciar un repo con git init y settear el remoto:
+ heroku git:remote -a hospitals-admin-angular-app <- el nombre cambiará
+Una vez fijado su remoto a mi repo local ya puedo añadir,commitear,pushear,...:
+git add . <- por si lo necesito,si hago cambios,etc ,puedo hacer lo que quiera en ese remoto
+git commit -m "..."<- lo mismo
+git push heroku master <- puedo hacer los re-deploys que necesite
+
+Bien.Al final tendré mi backend en https://hospitals-admin-angular-app.herokuapp.com/
+Fijate que inicié un repo dentro de otro repo,perfecto fakin git que bueno es
+
+				VIDEO 252 GENERAR EL BUILD DE ANGULAR
+
+Antes de hacer el build de Angular tengo un problema en el backend.Esto es porque estoy subiendo imagenes a mi server,y éste cambia.
+Heroku cada 24 horas hace un barrido de mi aplicación y lo resetea al código inicial,con lo que borrará las imágenes.
+Podría usar Cloudinary por ejemplo.
+
+Antes de hacer el build tengo que ir a los environments de produccion y cambiar la url:
+export const environment = {
+  production: true,
+  base_url: 'https://hospitals-admin-angular-app.herokuapp.com/api' 
+};
+Ya puedo hacer el ng build.Cuando termine copio su contenido a la carpeta public del backend.
+Sin embargo aún me queda decirle al backend cuando debe ser su router el que tenga el control y cuando el de Angular:
+
+			VIDEO 253 BACKEND SERVIR UNA SPA - USAR DOS ROUTERS
+
+Lógicamente,las rutas del frontend no son conocidas por el backend,asi que cuando
+ refresque y tome el control express no podrá encontrar la ruta y dará error cannot GET /...
+
+Lo mejor es pasarle una wildcard para ceder el control al enrutador del framework
+app.get('*', (req,res)=> {
+    res.sendFile(path.join(__dirname,'public/index.html'))
+});
+NOTA: hay que agregar el nuevo dominio al proyecto de Google!
+
+Por último,debo subir a GitHub todo,ya que tanto el server como el front están listos para producción.
+
+						SECCION 20 INTERCEPTORS
+
+En esta sección tocaremos varios temas como:
+
+1- Interceptores
+2- Operadores de RXJS como map, catchError
+3- Objetos propios de RXJS como el throwError
+4- Explicaremos el por qué de los interceptores y cómo usarlos
+
+Y otras cosas... pero el objetivo principal es aprender a implementarlos, ver su uso y los beneficios que nos brindan.
+
+Esta es una sección añadida después de haber terminado el curso, es un bonus al mismo porque muchos alumnos me lo han pedido.
+
+Con esto en mente creo un proyecto nuevo.En él veremos como realizar peticiones http e interceptarlas en Angular(usando rxjs,al parecer).
+
+			VIDEO 258 PETICIONES HTTP DE FORMA TRADICIONAL
+
 
