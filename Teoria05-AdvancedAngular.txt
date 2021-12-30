@@ -357,6 +357,149 @@ Esta es una sección añadida después de haber terminado el curso, es un bonus 
 
 Con esto en mente creo un proyecto nuevo.En él veremos como realizar peticiones http e interceptarlas en Angular(usando rxjs,al parecer).
 
-			VIDEO 258 PETICIONES HTTP DE FORMA TRADICIONAL
+			VIDEO 258 PETICIONES HTTP DE FORMA TRADICIONAL-HttpParams-HttpHeaders
+
+Antes de nada recuerda que para poder usar peticiones http tengo que importar el HttpClientModule:
+import { HttpClientModule } from '@angular/common/http';
+
+Luego solo es usar el servicio inyectandolo.Pero fijate que si quiero mandar parámetros opcionales como page o per_page puedo usar la clase HttpParams() que crea los params y con el método append(name,value) agregarlos.
+Claro que también puedo crear un template string:
+
+* En el service:
+ constructor(private http:HttpClient){}
+
+  getUsuarios(){
+  let params = new HttpParams().append('page',2);
+  return this.http.get(url,{params});
+
+* Dado que es común agregar nuevos queryParams es mejor usar 'let'.Si quisiera agregar headers puedo usar la clase HttpHeaders(fijate que siempre es Httpxxx):
+const headers = new HttpHeaders({'x-token':'sjffkd'})
+return this.http.get(url,{params,headers}) <- y van como otra propiedad más en el segundo argumento opcional options?.
+
+Sin embargo imagina que tengo muchas peticiones con headers y params diferentes.Esto no es del todo reusable(aunque en la gran mayoria de los casos es suficiente)
+
+		VIDEO 259 OPERATORS RXJS MAP-THROW ERROR Y CATCH ERROR
+
+Perfectamente puedo usar operadores rx para transformar la respuesta,como el map:
+
+  return this.http.get(`${this.req_api}`,
+     { headers,params }).pipe(
+      map( (resp:any) => resp['data'])
+     );
+
+Sin embargo puedo apreciar que si pongo la url mal no estoy capturando el error(es decir,no estoy tratando el error de la manera que yo quiera)
+
+El operador catchError se encarga de atrapar el error,tal como su nombre indica y me permite devolver mi propio error,incluso puedo enviar lo que quiera como respuesta.
+El operador throwError crea un Observable que no emite nada al observer y automáticamente emite una notificación de error.Usaremos este Observable para el retorno del catchError.
+
+this.http.get(url,{params,headers}).pipe(
+  map( (resp:any) => resp['data']J),
+  catchError( err => {
+    console.warn('Error en la petición!');
+    return throwError('Error de tipo:',err);
+})
+
+Pero de nuevo imagina que por cada petición tengo que ir repitiendo esto.Una solución podría ser crear un función,cierto:
+manejaError(error:HttpErrorResponse){
+  code for handling an Error
+}
+
+Aqui es donde veo la necesidad de implementar algo que me pueda ayudar a intercepar todas las peticiones fallidas de mi app y procesarlas sin repetir código.
+En aplicaciones con muchas peticiones interceptar las peticiones es crucial para no repetir código.Los interceptores además no son sólo para el manejo de errores sino también para insertar el token en el header de cada petición o usar un param...
+
+				VIDEO 260 INTERCEPTORES
+
+Los interceptores no son más que un servicio común y corriente:
+
+ng g s interceptors/interceptor --skip-tests
+
+Recuerda que un servicio es una simple clase,asi que para que sea un interceptor tendrá que implementar la interfaz HttpInterceptor y desarrollar su método abstracto intercept(req,next):Observable
+
+/* Para usar un interceptor tengo que implementar la interface HttpInterceptor y desarrollar su método intercept */
+@Injectable({ providedIn: 'root' })
+export class InterceptorService implements HttpInterceptor{
+
+  /** el método intercept tiene como primer argumento la request que es de tipo HttpRequest<any>(pues puede ser cualquiera).
+   * Como segundo arg lleva el next de tipo HttpHandler.
+   * El método retornará un Observable que resuelve cualquier cosa también.
+   * Un interceptor es como una válvula abierta,que recibe la request y debe retornarla.Lo mismo que recibe lo retorna.
+   * Para ello se usa el método next.handle(req) que es el que recibe la request y retorna un Observable.
+   * No puedo retornar una request,debe ser un Observable.
+   * 
+   *  */
+  
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    console.log('paso por el interceptor');
+    return next.handle(req);;  
+  }
+
+Sin embargo esto no es suficiente,no veré este console.log.Tengo que avisar a Angular(en los providers) que he creado un interceptor.Lo haremos en el app.module,en un objeto dentro del arreglo 'providers':
+ providers: [{
+    provide: HTTP_INTERCEPTORS,
+    useClass: InterceptorService,
+    multi: true
+  }],
+
+Ojo,que hay que importar ambos.Y hay que usar multi:true para que escuche por todas las peticiones:
+
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
+import { InterceptorService } from './interceptors/interceptor.service';
+
+Claro que nuestro interceptor que retorna next.handle(req); no hace nada aún.
+
+NOTA.al parecer los interceptors siempre van en el providers del app.module y tendré que usar una condición para que no actue el interceptor en el login y register,si por ejemplo estoy mandando un token,porque intercepta todas.
+
+			VIDEO 261 CONFIGURAR EL INTERCEPTOR
+
+Realmente es bastante obvio lo que hay que hacer.Dado que recibo la request en el interceptor tendré que agregarla lo que quiera.
+
+Sin embargo tengo que tener en cuenta una cosa.La request ya ha sido lanzada y no puede ser manipulada,no es mutable.Luego hay que clonarla.Y además hay que clonarla antes de manipularla,claro.Es decir que lo primero obligatoriamente es  clonar la request.Para ello está el método de instancia clone():
+   
+ const headers = new HttpHeaders({
+    'token-usuario':'abcdefghijklmnopqrstuvwxyz'
+  });
+ const params = new HttpParams().append('page',2);
+
+   /* la request en este punto ya ha sido lanzada y una request no puede manipularse una vez ha sido lanzada.Debo clonar la request y despues manipularla,en este orden */
+    const reqClone = req.clone({
+      headers,
+      params
+    });
+    
+    return next.handle(reqClone);  
+  }
+Desde ahora todas las peticiones llevarán estos headers y estos params.Y fijate que limpio queda el servicio:
+return this.http.get(`${this.req_api}`).pipe(
+        map( (resp:any) => resp['data']));
+
+Uno de los objetivos de crear un interceptor es configurar un registro de todos los errores(puedo interceptarlos y mandarlos a una DB),otro objetivo es simplemente manejar el error de la manera en particular que desee como desarrollador.Hagamoslo:
+
+Dado que intercept(req,next):Observable devuelve un Observable es bien fácil:
+
+return next.handle(reqClone).pipe( catchError(handleError) );
+ 
+  handleError(error: HttpErrorResponse) {
+    console.log('Error en la petición');
+    console.warn('Guardando en el log de errores...');
+    return throwError('Error de tipo:'+error);
+  }
+
+Ahora podría guardar cada error en una petición en un registro en una DB,por ejemplo.Desde luego parece algo muy bueno.Seguir investigando y mejorando con interceptores(implementarlos también a modo de aprendizaje).
+
+			SECCION 21 PRUEBAS AUTOMÁTICAS-UNITARIAS-INTEGRACIÓN
+
+Esta es una sección pequeña introductoria al tema de las pruebas de integración y unitarias. Hay dos clases explicativas para comprender un poco más sobre las pruebas.
+
+Esta parte del curso, parte de cero, ya que anteriormente no he cubierto este tema, por lo que si eres experto en esto, posiblemente valga la pena saltarse la siguiente sección y comenzar con las pruebas unitarias intermedias/avanzadas.
+
+Las pruebas están ubicadas en 4 categorías:
+
+1- Básicas - realmente son las pruebas más simples que nos ayudarán a iniciar
+2- Intermedias - Son pruebas con una pequeña dificultad
+3- Intermedias 2 - Son pruebas con un poco más de complejidad
+4- Avanzadas - Son pruebas que ya usan diversos servicios y construcción personalizada para usar servicios falsos controlados por nosotros
+
+		VIDEO 265 TEORÍA PRUEBAS AUTOMÁTICAS-TESTING
+
 
 
