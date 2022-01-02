@@ -501,5 +501,236 @@ Las pruebas están ubicadas en 4 categorías:
 
 		VIDEO 265 TEORÍA PRUEBAS AUTOMÁTICAS-TESTING
 
+A la hora de hablar de pruebas suelen surgir cuatro preguntas:
+1- ¿Para qué sirven?
+2- ¿Qué debo de probar?
+3- ¿Valen la pena?
+4- ¿Qué tipos de pruebas existen?
+
+Las pruebas sirven para probar cualquier funcionalidad de mi aplicación,pero sin tener que realizar posibles pasos adicionales,como haberse logeado.Ejecutan un test en un ambiente controlado,simulando cualquier paso necesario anterior.
+
+VENTAJAS
+Las pruebas ayudan a encontrar errores y permite probar código de otros programadores.
+Permiten detectar errores antes de desplegar la aplicación a producción.
+Ayudan a generar un código más limpio,generando reportes y estadísticas útiles.
+
+DESVENTAJAS
+Probar todo el código lleva mucho tiempo.
+No garantizan un código 100% libre de errores.
+Los costos aumentan
+
+¿QUÉ DEBO DE PROBAR?
+Hay que probar todo,sin embargo,esto es muy difícil por no decir imposible.Lo mejor es siempre quedarse en un punto intermedio entre probar todo y no probar nada,es decir probar un 50% de la aplicación(siempre priorizando puntos críticos).
+Sobre todo hay que probar el corazón de la app,lo más importante que haga esa app
+
+Por último recalcar que hay dos tipos de pruebas,automáticas y manuales.Las manuales ya las llevo a cabo yo como desarrollador.
+Consisten en ir a editor,escribir código,ir al navegador,ver que falla,etc.Es algo que ya hará el desarrollador en su día a día.
+
+				VIDEO 266 TIPOS DE PRUEBAS
+
+Las pruebas automáticas se dividen en tres partes:
+
+1- Unitarias: permiten tomar un pedazo de código y probarlo de forma aislada.No tendrán presencia de recursos externos,como llamadas a una API u otro servicio.
+Normalmente tendré que hacer un mock de ese servicio,ya que por ejemplo no podré logearme sin hacer un llamado.Pero será un petición fake.
+Permiten probar rápidamente cualquier función o método.
+Puedo escribir muchas en poco tiempo
+Puedo hacer pruebas de estrés  
+Pero no podré saber los tiempos de respuesta de la API ya que opero sobre un fake
+
+2- De Integración: aquí ya influyen dos o más componentes(por ejemplo una función que modifica el html ya está actuando sobre dos componentes)
+De nuevo mockearán cualquier data que necesiten.
+Aún con estos dos tipos al entrar un usuario en la app final podría haber fallos,es por eso que todavía quedará testear la app final con las endToEnd.
+
+3- EndToEnd:También conocidas como de extremo a extremo.Son pruebas muy lentas,ya que se testea en la propia app,y esto es muy lento(tener que logearse,etc).
+Por lo general se recomienda no usar EndToEnd y ser muy precisos en las unitarias y de integración para asi evitar estas últimas que son muy lentas
+Las pruebas EndToEnd evaluan un flujo completo de la app.Normalmente las realiza QA sobre una versión beta 
+ Las pruebas EndToEnd se realizan en un entorno de aplicación completo con un comportamiento mas realista.
+
+				VIDEO 267 INICIO DEL PROYECTO DE PRUEBAS
+
+Vamos a crear un proyecto nuevo.Para probar un proyecto Angular es con ng test.
+Esto va a levantar un pequeño navegador web.Angular CLI ya viene con jasmine,que es un framework para pruebas.Viene ya configurado además.
+
+Puedo ver que es muy parecido a jest:
+describe('AppComponent', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [
+        AppComponent
+      ],
+    }).compileComponents();
+  });
+
+  it('should create the app', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    expect(app).toBeTruthy();
+  });
+
+En cuanto a la nomenclatura hay que usar la misma de siempre file.spec.extension,la extension será ts por motivos obvios.
+Jasmine buscará todos los archivos .spec.ts.
+Si quisiera ignorar una prueba(o todas) tengo que poner una x delante:
+
+
+xdescribe('AppComponent', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [
+        AppComponent
+      ],
+    }).compileComponents();
+  });
+
+Puedo ver que las omitirá(skipped 3):
+✔ Browser application bundle generation complete.
+Chrome 96.0.4664.110 (Linux x86_64): Executed 0 of 3 (skipped 3) SUCCESS (0.009 secs / 0 secs)
+TOTAL: 0 SUCCESS
+
+				SECCION 22 PRUEBAS UNITARIAS BÁSICAS
+
+Esta sección es muy básica.Paulatinamente iremos subiendo en dificultad.
+Sección dedicada a las pruebas unitarias propiamente, son pruebas muy básicas, por lo que si eres conocedor del tema, las sentirás aburridas.
+
+1- Probaremos Strings
+2- Números
+3- Booleanos
+4- Arreglos
+5- Clases
+6- Cobertura de nuestras pruebas.
+
+La cobertura sobre las pruebas, nos ayudará a saber que tantas líneas de nuestro código están cubiertas y respaldadas por pruebas unitarias
+
+				VIDEO 270 GENERALIDADES DE LAS PRUEBAS
+
+Normalmente en Angular los archivos de pruebas se encuentran al lado del archivo a testear,dada su naturaleza.De nuevo,jasmine barrerá el proyecto en busca de .spec.ts files,asi que esto no es muy importante.
+
+Un archivo de pruebas siempre empiezan con el método describe(),que englobará a todas las pruebas.Cada prueba usará el método it(),de forma similar a test() en React:
+
+describe('Pruebas en el string.ts', () => {
+  
+  it('Debe de regresar un string', () => {
+    
+  })
+})
+NOTA.puedo entrar al modo DEBUG en el navegador de las pruebas y abrir las devtools de ese navegador para ver los console.log.
+
+					VIDEO 271 PROBANDO STRINGS
+
+NOTA: En Angular para poder testear algo voy a tener que exportarlo.Veamos como testear esta simple función:
+ 
+export function mensaje (nombre: string) {
+  return `Hola ${nombre}`;
+}
+
+Fijate que tengo autocompletado 
+ it('Debe de regresar un string', () => {
+    const resp = mensaje('Juan');
+    expect(typeof resp).toBe('string');
+  })
+
+			VIDEO 272 COMPROBAR QUE EL RESULTADO CONTENGA ALGO
+
+Realmente comprobar sólo el tipo no es una gran prueba.Sería mejor poder comprobar que el contenido de la repuesta al método sea algo concreto:
+
+  it('Debe de regresar un string con el nombre enviado', () => {
+    const resp = mensaje('Juan');
+    expect(resp).toContain('Juan');
+  });
+  
+Fijate que también puedo usar toBe.Sin embargo,es mucho mejor evaluar con ToContain ya que  con el ToBe si agregara un simple espacio mal o de más en el método daría fallo.Es mejor idea usar ToContain.ToBe es cuando quiera tener certeza absoluta.
+
+					VIDEO 273 PROBANDO NUMEROS
+
+Evaluemos algo tan fácil como esto:
+export function incrementar(n: number) {
+  if(n>100) {
+    return 100;
+  }
+  return n + 1;
+}
+Realmente no hay complicación alguna:
+describe('Pruebas en numeros.ts', () => {
+    it('Debe de retornar 100, si el numero ingresado es mayor a 100', () => {
+      const numero = 101;
+      const resp = incrementar(numero);
+      expect(resp).toBe(100);
+    });
+
+    it('Debe de retornar el numero ingresado mas 1, si el numero ingresado es menor a 100', () => {
+      const numero = 50;
+      const resp = incrementar(numero);
+      expect(resp).toBe(51);
+    });
+
+					VIDEO 274 PROBANDO BOOLEANS
+
+Analizemos:
+export function usuarioLogeado(){
+  return true;
+}
+Poco que decir,solo que puedo usar ToBeTruthy() o ToBeFalsy() también
+describe('Pruebas de booleanos', () => {
+  it('Debe de retornar true', () => {
+    const resp = usuarioLogeado();
+    expect(resp).toBe(true);
+    expect(resp).toBeTruthy();
+    expect(resp).not.toBeFalsy();
+  })
+
+NOTA:Segun veo, han añadido nuevas métodos en el jasmine 3.5.0, las cuales se llaman directamente toBeTrue() y toBeFalse(), las cuales son mucho mas confiables que las toBeTruthy() y toBeFalsy(), porque la estructura de las nuevas es mucho mas estricta y firme que esas, y por lo que veo, si se van a evaluar booleanos, es recomendable usar entre toBe(true|false) o toBeTrue().
+Usar nuevas funciones.
+
+					VIDEO 275 PROBANDO ARREGLOS
+
+Evaluando esta función:
+export function obtenerRobots(){
+  return ['Megaman', 'Jarvis', 'Robocop', 'R2D2'];
+}
+Puedo testear por ejemplo que siempre tenga al menos tres robots:
+
+  it('Debe de retornar al menos 4 robots', () => {
+    const robots = obtenerRobots();
+    expect(robots.length).toBeGreaterThanOrEqual(4);
+  });
+
+De nuevo no es buena idea poner toBe(3) por ser muy rigido.La función ToContain() es igual de útil con arreglos:
+  it('Debe de contener a Megaman y a Jarvis', () => {
+    const robots = obtenerRobots();
+    expect(robots).toContain('Megaman');
+    expect(robots).toContain('Jarvis');
+  });
+Es una función básica,como puedo observar.
+
+							VIDEO 276 PROBANDO CLASES 
+
+NOTA:este video es muy importante,ya que en Angular todo son clases.
+Evaluemos esta clase:
+export class Jugador {
+  hp:number;
+  
+  constructor() {
+    this.hp = 100;
+  }
+*No queremos tener vida negativa
+  recibirDanio(danio:number) {
+    if(danio >= this.hp) {
+      this.hp = 0;
+    } else {
+    this.hp = this.hp - danio;
+    }
+    return this.hp;
+  }
+}
+
+  it('Debe de retornar 0 de hp,si recibe mas de 100 de daño', () => {
+    const jugador = new Jugador();
+    jugador.recibirDanio(150);
+    expect(jugador.hp).toBe(0);
+  });
+Recuerda que las pruebas son secuenciales y transmiten sus valores.Si tuviera esta linea fuera de cada prueba el resultado no sería el mismo:
+const jugador = new Jugador();
+Aqui entra en juego los ciclos de vida de las pruebas(beforeAll,beforeEach,afterEach y afterAll),que veré en el siguiente video.
+
+				VIDEO 277 CICLOS DE VIDA DE LAS PRUEBAS
 
 
