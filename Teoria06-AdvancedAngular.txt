@@ -1,0 +1,18 @@
+				SECCION 24 PRUEBAS DE INTEGRACIÓN EN ANGULAR
+
+En esta sección veré la estructura de una prueba de integración,la cual es bastante diferente a la de una unitaria.Angular CLI me puede ayudar con esto,pero lo veremos más adelante,primero lo haremos manualmente.
+También vamos a realizar nuestras primeras evaluaciones sobre el HTML.
+
+Esta sección se enfoca en las pruebas de integración:
+
+1- Aprender la configuración básica de una prueba de integración
+2- Comprobación básica de un componente
+3- TestingModule
+4- Archivos SPEC generados automáticamente por el AngularCLI
+5- Pruebas en el HTML
+6- Revisar inputs y elementos HTML
+7- Separación entre pruebas unitarias y pruebas de integración
+
+			VIDEO 296 CONFIGURACIÓN BÁSICA PARA PRUEBAS DE INTEGRACIÓN
+
+

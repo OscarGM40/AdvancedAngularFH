@@ -733,4 +733,306 @@ Aqui entra en juego los ciclos de vida de las pruebas(beforeAll,beforeEach,after
 
 				VIDEO 277 CICLOS DE VIDA DE LAS PRUEBAS
 
+Poco que decir,es bastante obvio cuando se ejecuta cada ciclo de vida de las pruebas.
+El beforeAll se dispara una vez en todo el suite de pruebas,justo antes de levantar la primera,el afterAll se dispara al terminar toda la suite de pruebas.
+Y lógicamente el ciclo beforeEach se ejecuta antes de cada prueba y el afterEach justo despues de cada prueba(en realidad si la prueba es asincrona puede que se ejecute antes.
+
+Sabiendo esto puedo resumir la inicialización de la instancia a una única vez:
+
+describe('Pruebas en clases', () => {
+  let jugador: Jugador;
+
+  beforeEach(() => {
+    jugador = new Jugador();
+  })
+En realidad puedo hacer más cosas como devolver el hp a 100 despues de cada prueba:
+afterEach( () => {
+  jugador.hp = 100
+});
+NOTA:parece que jasmine está ejecutando los tests en ordean aleatorio por defecto.Para que no suceda esto tengo que configurar la propiedad random:boolean de jasmine en el karma.conf.js:
+
+      jasmine: {
+        random: false
+      }
+
+			VIDEO 278 OBSERVAR EL PORCENTAJE DE COBERTURA DE TESTING
+
+Puedo saber el porcentaje de cobertura del testing de mi app.Jasmine ya viene con una herramienta que mide las líneas de código testeado.
+Para ver este procentaje tengo que usar la flag --code-coverage junto con el ng test.Angular creará la carpeta coverage con un index.html en mi proyecto.
+Lógicamente lo puedo abrir en cualquier browser.
+Este tipo de funcionalidad es una gran ayuda para saber que % llevo testeado.
+
+				SECCION 23 PRUEBAS UNITARIAS INTERMEDIAS Y AVANZADAS
+
+Haremos pruebas automáticas con formularios,EvenEmitters,espías(con los espias se puede simular el trabajo de otro programador,sabiendo si trabaja duramente o no )
+Testear formularios es muy importante,ya que estoy probando que la data llega al servidor,por ejemplo.
+También vamos a hacer pruebas sobre validaciones(ya sean de Angular o mías).Es una sección importante.
+
+Esta sección trabaja con pruebas un poco más complejas y reales:
+
+1- Pruebas sobre Event Emitter
+2- Formularios
+3- Validaciones
+4- Saltar pruebas
+5- Espías
+6- Simular retornos de servicios
+7- Simular llamado de funciones
+
+Esta sección da fundamentos muy valiosos para realizar pruebas unitarias y de integración
+
+						VIDEO 282 SALTARSE PRUEBAS
+
+Una forma de saltar un grupo de pruebas sería simplemente comentarlo,pero no veré la descripción.Puedo dejar la descripción de ese grupo de pruebas y simplemente marcarlo como skipped con 'x'(no se recomienda comentar,sino ignorar con xdescribe)
+También puedo usar la x sobre un test con xit('should...') para ignorar una única prueba.Normalmente se suele ignorar todo el grupo con el xdescribe.
+
+				VIDEO 283 TESTING EVENT EMITTER
+
+Vamos a realizar pruebas sobre las subscripciones.Fijate que en Angular puedo crearme una suscripción a cualquier cosa con la clase EventEmitter:
+
+ hpCambia = new EventEmitter<number>();
+
+    constructor() {
+      this.hp = 100;
+    }
+
+    recibeDanio(danyo:number) {
+      if(danyo >= this.hp) {
+        this.hp = 0;
+      } else {
+      this.hp = this.hp - danyo;
+    }
+      this.hpCambia.emit(this.hp);
+
+IMPORTANTE:para testear un EventEmitter tengo que dispararlo suscribiendome:
+  it('Debe de emitir un evento cuando recibe daño y sobrevivir si es menos de 100', () => {
+    let NuevoHp = 0;
+    /* esto es solo ponerse a la escucha,ojo */
+    jugador.hpCambia.subscribe(hp => NuevoHp = hp);
+    jugador.recibeDanio(50);
+    expect(jugador.hp).toBe(50);
+    
+  });
+Es totalmente necesario suscribirse,por motivos obvios.
+Esta parte es muy interesante ya que aunque la suscripción es asincrona el test va a esperar,nunca va a ejecutar jugador.recibeDanio(50) sin haberme suscrito ya
+El proceso es tan rápido que es como si fuera síncrono y el valor "nuevoHP" cambia inmediatamente.
+De echo hay gente que hizo el expect en el suscribe xd:
+jugador.hpCambia.subscribe(hp => {
+  expect(hp).toBe(80)});
+jugador.recibeDanio(20);
+
+				VIDEO 284 FORMULARIOS Y SIMULAR INYECCION DE CLASES
+
+Creo una clase que sea un formulario.Fijate que en el constructor tengo un argumento para inyectar formBuilder:
+
+export class FormularioRegister {
+form:FormGroup
+constructor(fb:FormBuilder){
+this.form= fb.group({
+  email:['',[Validators.required,Validators.email]],
+  password:['',[Validators.required]]
+});
+
+Cuando vaya a instanciar una clase que recibe argumentos,como esta clase FormularioRegister tendré que pasarle ese argumento:
+
+* Muchas clases van a pedir esto,y basta con instanciar la clase en cuestión:
+
+  beforeEach(() => {
+    component = new FormularioRegister(new FormBuilder());
+  });
+
+  it('Debe de crear un formulario con los campos email y password', () => {
+    expect(component.form.contains('email')).toBeTruthy();
+    expect(component.form.contains('password')).toBeTruthy();
+  })
+
+En cuanto a validaciones puedo obtener el control en cuestión con get('controlName') y establecer un valor con control.setValue(value).Nada que no sepa:
+
+ it('El email debe ser obligatorio', () => {
+    const control = component.form.get('email');
+    control!.setValue('');
+    expect(control!.valid).toBeFalsy();
+  });
+
+  it('El email debe ser un correo valido', () => {
+    const control = component.form.get('email');
+    control!.setValue('correo-electronico');
+    expect(control!.valid).toBeFalsy();
+  });
+
+					VIDEO 287-288 ESPIAS
+
+La idea de usar espias es poder testear servicios pero pudiendo cambiar incluso la url al que apuntan en modo testing:
+Un espia permite realizar peticiones falsas cuando algo suceda programáticamente.
+
+En el medicosService tengo urls que no existen:
+
+getMedicos() {
+    return this.http.get('...')
+    .pipe( map( (resp:any) => resp['medicos'] ) );
+  }
+  
+ agregarMedico( medico: any ) {
+    return this.http.post('...', medico )
+    .pipe( map( (resp:any) => resp['medicos'] ) );
+  }
+
+Puedo ver que apuntan a una url no válida(...).Esto no es importante,porque no vamos a realizar peticiones reales.Cambiaremos el destino al usar espías.
+
+NOTA:puedo ver que al instanciar el xxxService(en este caso el medicosService a su vez pide instanciar a HttpClient que a su vez pide HttpHandler).Hay que solucionar esto.
+
+1- Una forma sería usar HttpClient | null en la creación del servicio e iniciarlo a null en el testing:
+
+En el medicosService.ts
+constructor( public http: HttpClient | null) { }
+Y en el testing puedo hacer new MedicosService(null);
+
+2- Pero desde las últimas versiones se recomienda crear el espía ya y pasarlo al instanciar el servicio,en vez de usar la aproximación por null:
+
+const spy = jasmine.createSpyObj('HttpClient', { post: of({}), get: of({}) })
+servicio = new MedicosService(spy)
+
+Hagamos una primera prueba comprobando que al llamar al ngOnInit de medicos.ts se cargan los médicos,es decir,que se llama al servicio.
+NOTA:fijate que debo llamar a cada ciclo de vida yo manualmente en un ambiente de testing,ya que si no no se llamará.Dado que quiero ver que sucede en el ngOnInit de la clase tendré que llamar pues al ciclo de vida yo:
+
+it('debe de cargar medicos a través del servicio en el ngOnInit', () => {
+  spyOn(servicio,'getMedicos').and.callFake()
+});
+
+
+spyON(elementoAEspiar,metodoAEspiar).and.callFake( callback)  básicamente 'espía' esa clase y ese método.Podría traducir espiar por suplantar.
+
+Suplantará esa función por la callback(en este punto recuerda que una peticíón a HttpClient retorna un Observable,luego debo retornar un Observable)
+
+En otros casos puedo simplemente devolver un arreglo,por ejemplo,si tuviera tratada una respuesta y devolviera un arreglo de usuarios.
+let todos = [1,2,3,4]
+spyOn(service, 'getTodos').and.returnValue(of(todos));
+* Puedo observar que los espias son geniales,fundamentales y superútiles.
+
+Con todo esto,la prueba quedaría asi:
+
+describe('pruebas en peticiones a un servicio', () => {
+  let componente:MedicoComponent;
+  let servicio:MedicosService;
+
+  beforeEach( () => {
+    const spy = jasmine.createSpyObj('HttpClient',{ 
+      post:of({}),
+      get:of({})
+    });
+    servicio = new MedicosService(spy)
+  });
+  it('debe de cargar medicos en el ngOnInit', () => {
+   * hago un fake del retorno del método
+  spyOn(servicio,'getMedicos').and.callFake( () => {
+     return from([ ['medicos1','medicos2'  ])
+  *instancio la clase y llamo a su ciclo de vida
+   componente = new MedicosComponent(servicio);
+   component.ngOnInit();
+   expect(componente.medicos.length).toBeGreaterThan(0);
+   });
+  });
+});
+Perfecto,queda muy claro lo que es un espia y lo que hace,y parece sencillo.
+
+	VIDEO 289 COMPROBAR QUE UN MÉTODO HAYA SIDO LLAMADO
+
+Queremos confirmar que cuando llamemos al método agregarMedico de la clase se dispara su homónimo del servicio.
+Fijate que el método del servicio recibe argumentos,y que tengo que fakearlo:
+
+  agregarMedico( medico: any ) {
+    return this.http.post('...', medico )
+    .pipe( map( (resp:any) => resp['medicos'] ) );
+  }
+
+Cualquier método que 'espie' que reciba argumentos tendré que pasarlos en los argumentos de la función callback del callFake(cb).
+Sin embargo en este caso no nos importa devolver algo correctamente ya que sólo vamos a testear que se llame el método del servicio al llamar al de la clase,da igual devolver algo correcto.
+
+NOTA:dado que la función empty está deprecada puedo usar un simple return of() para devolver un Observable vacío.
+
+it('debe de llamar a la función del servicio', () => {
+  const espia = spyOn(servicio,'agregarMedico').and.callFake( (medico) => of() );
+  componente = new MedicosComponent(servicio);
+ componente.agregarMedico();
+ expect(espia).ToHaveBeenCalled();
+});
+
+				VIDEO 290 ESPIAS - FUNCION RETURN VALUE(value)
+
+En el ejemplo anterior no nos importaba el retorno del espia,pero esta vez si nos va a importar,porque al agregar un médico en la clase le hacemos un push al arreglo de medicos con ese medico,luego vamos a comprobar que realmente se haga push con un medico. 
+
+NOTA:returnValue(value) y callFake(callback) son prácticamente iguales para este ejemplo.Podría usar cualquiera.La diferencia es que una es una callback y la otra es un argumento lo que reciben:
+
+it('debe de pushear el nuevo médico al arreglo de medicos', () => {
+  const newMedico={nombre:'Juan',id:1};
+  spyOn(servicio,'agregarMedico').and.returnValue( of(newMedico) );
+  componente.agregarMedico();
+  expect(componente.medicos.indexOf(newMedico)).ToBeGreaterThanOrEqual(0); <- si existe su index es que lo agregó,fin de la prueba.
+Por último,fijate que siempre es and.method de momento.
+
+			VIDEO 291 PROBAR ERRORES EN LOS OBSERVABLES	
+
+Para probar los errores habrá que hacer que el espía lance un error como retorno.Es decir que en el returnValue retorne un Observable con un error(recuerda que throwError es un Observable que no emite nada y automáticamente lanza un error).
+
+Para este test recuerda que tengo una simple propiedad de la clase:
+ public mensajeError!: string;
+
+Y en el método de la clase se le asigna el valor de un posible error:
+agregarMedico() {
+    const medico = { nombre: 'Médico Juan Carlos' };
+    this._medicoService.agregarMedico(medico)
+          .subscribe(
+            medicoDB => this.medicos.push(medicoDB),
+            err => this.mensajeError = err <- si hay error
+          );
+  }
+
+NOTA: Observable.throw ahora es throwError:
+
+it('si falla el método la propiedad de la clase debe albergar el error', () => {
+  const miError='No se pudo agregar el médico';
+
+  spyOn(servicio,'agregarMedico').and.returnValue(throwError(miError));
+  componente.agregarMedico();
+   expect(componente.mensajeError)
+});
+Por último cabe mencionar que comprobar que mi aplicación se comporta de la manera que yo programé es otra prueba que debo realizar,es algo que debo hacer.
+
+			VIDEO 292 SIMULAR CONFIRMACIONES DE USUARIO (window.confirm())
+
+NOTA:fijate que para saber si el usuario confirmó algo simplemente uso un condicional:
+borrarMedico(id:string) {
+  const confirmar = confirm('Estas seguro que desea borrar este médico);
+  if(confirmar){ this._medicoService.borrarMedico(id);
+}
+Memoriza esto porque es sencillisimo esperar a que el usuario confirme algo usando window.confirm():boolean.
+
+Bien,volviendo al video,si hago una prueba con un espia sobre este médico:
+  it('Debe de llamar al método del  servicio  para borrar un médico', () => {
+        spyOn(window,'confirm').and.returnValue(true); 
+        const id = ""+1;
+        const espia = spyOn(servicio, 'borrarMedico').and.
+        callFake((id) => {
+            return of([]);
+        })
+        componente.borrarMedico(id);
+        expect(espia).toHaveBeenCalledWith(id);
+    });
+veré que en el navegador de las pruebas se me abre la ventana de confirm.Sin embargo,EL OBJETIVO DE LAS PRUEBAS AUTOMÁTICAS ES QUE SE EJECUTEN SIN INTERACCIÓN DEL PROGRAMADOR.
+
+Debo simular ese window.confirm pues.¿como?,simplemente con otro espia:
+spyOn(window,'confirm').and.returnValue(true); 
+
+De igual forma podemos testear que si el usuario dió a cancelar nunca se borre el médico:
+    it(' No Debe de llamar al método del  servicio  para borrar un médico', () => {
+        spyOn(window,'confirm').and.returnValue(false);
+
+        const id = ""+1;
+        const espia = spyOn(servicio, 'borrarMedico').and.
+        callFake((id) => {
+            return of([]);
+        })
+        componente.borrarMedico(id);
+        expect(espia).not.toHaveBeenCalled();
+    });
+
 
