@@ -15,4 +15,253 @@ Esta sección se enfoca en las pruebas de integración:
 
 			VIDEO 296 CONFIGURACIÓN BÁSICA PARA PRUEBAS DE INTEGRACIÓN
 
+Primero creo un componente.Fijate que acceder a su css o a su html ya es una prueba de integración(incluso usando css inline en la clase es una prueba de integración porque intervienen dos archivos el .ts y el .css)
+
+Probablemente lo más importante sea entender que en una prueba de integraćion necesito que Angular pueda usar todo su repertorio:pipes,ciclos de vida,...
+
+Para poder hacer esto tengo que usar la clase TestBed.Esta clase me da acceso a multitud de métodos útiles.Tendré que configurarla en el ciclo de vida beforeEach:
+
+import { TestBed,ComponentFixture } from '@angular/core/testing';
+
+let component:MedicosComponent;
+let fixture:ComponentFixture<MedicosComponent>;
+
+beforeEach( () => {
+  TestBed.configureTestingModule({})
+});
+
+El objeto de configuración es muy parecido a un módulo,tendrá las propiedades declarations,imports,exports,providers,...:
+
+    TestBed.configureTestingModule({
+      declarations: [MedicosComponent],
+      providers: [], //aqui irian los servicios que necesita el componente
+      imports: [] //aqui irian los modulos que necesita el componente
+  });
+
+ /* ahora hay que crear ese componente,en vez de con el new con el createComponent.
+    Este createComponent regresa una instancia de ComponentFixture<T>,con el que podré acceder al html o css,es decir navegar por el DOM que se creó.
+    Es como un wrapper en React  */
+    fixture = TestBed.createComponent(MedicosComponent);
+    component = fixture.componentInstance;
+
+Esta es la configuración básica para una prueba de integración.
+
+		VIDEO 297 COMPROBAR QUE EL COMPONENTE FIXTURE SE CREÓ CORRECTAMENTE
+
+Podemos comprobar rápidamente que el componente se ha creado correctamente creando un simple método:
+ saludarMedico(nombre: string) {
+    return `Hola ${nombre}`;
+  }
+En la prueba,si el componente se creó correctamente podré acceder al método
+  it('Debe de crearse el componente', () => {
+    expect(component).toBeTruthy();
+    expect(component.saludarMedico('Juan')).toBe('Hola Juan');
+  });
+
+				VIDEO 298 USO DE SERVICIOS - TESTING DE SERVICIOS
+
+Creemos un servicio normal:
+@Injectable({ providedIn: 'root' })
+export class MedicoService {
+
+  constructor(private http: HttpClient) { }
+
+  getMedicos () {
+    return this.http.get('...');
+  }
+  
+}
+Crearemos un espia para la url,no es importante.La clase lo inyectará y usará:
+  medicos!:any[];
+ constructor(public _medicosService:MedicosService) { }
+
+ obtenerMedicos() {
+    this._medicosService.getMedicos()
+      .subscribe( (medicos:any[]) => this.medicos = medicos);
+  }
+
+Si intento levantar las pruebas veré varios errores,el primero será 'no provider for MedicosService!.Hay que usar la propiedad providers en objeto de configuración de TestBed.configureTestingModule.
+
+Claro que al proveerlo me dará el error del SErvicio que inyecta a HttpClient:
+No provider for HttpClient!
+Realmente la solución es importar el módulo HttpClientModule como si fuera el app.module,pues recuerda que hay que pasarle todo al archivo de testing:
+
+    TestBed.configureTestingModule({
+      declarations: [MedicosComponent],
+      providers: [MedicosService], 
+      imports: [HttpClientModule] <- simplemente lo importo al mock
+  });
+
+Si bien no hemos hecho ninguna prueba todavía ya hemos inyectado el servicio al componente fake sin error.
+
+			VIDEO 299 ARCHIVOS SPEC GENERADOS POR CLI
+
+Ya habiamos comentado que Angular puede crear los archivos también(realmente siempre lo estoy quitando yo con el --skip-tests).
+Asi pues creo un nuevo componente sin la flag.Si comparamos ambos archivos veré que son casi iguales:
+
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
+import { HospitalComponent } from './hospital.component';
+
+describe('HospitalComponent', () => {
+  let component: HospitalComponent;
+  let fixture: ComponentFixture<HospitalComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ HospitalComponent ]
+    })
+    .compileComponents();
+  });
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(HospitalComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+Si que puedo ver que Angular generó dos beforeEach,pero el primero usó async/await.Esto es porque el componente tiene que acceder al html,al css.Sin embargo esto es de antes,ya que ahora Angular usa Webpack y compila todo juntandolo y tendrá acceso instantáneo a ese html,css,ts etc.Puedo quitarlo perfectamente.
+
+En cuanto al .compileComponents() tampoco es necesario por la misma razón,con Webpack ya están juntos y no hace falta compilarlos.
+
+En cuanto al fixture.detectChanges() simplemente se dispara el ciclo de detección de cambios,por lo demás,realmente es justo lo que hicimos en el video anterior:
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      declarations: [HospitalComponent]
+    })
+    fixture = TestBed.createComponent(HospitalComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+			VIDEO 301 PRUEBAS EN COMPONENTE INCREMENTADOR
+
+Realmente aún no hemos echo ninguna prueba,solo hemos visto como configurar una prueba de integración que use servicios y módulos y sus diferencias con hacerlo por CLI.
+Fijate que cuando traiga un componente como éste,tendré que importar a mi app.module todos los módulos que use el componente.
+
+		VIDEO 302 REALIZANDO PRUEBAS SOBRE EL HTML DEL COMPONENTE
+
+Ahora si,es hora de realizar la prueba de integración.Fijate que tal como tengo el código 'component' hace referencia a la clase y me dará acceso a sus propiedades y métodos y fixture me dará el acceso al HTMl
+
+Par obtener un elemento tengo que usar el método query(predicate)que es parecido al find de jest,sólo que query permite buscar un único elemento y queryAll varios.Necesitaré importar una clase adapter para poder apuntar a selectores CSS en ese predicate del query,o directivas.
+* La clase By viene de @angular/platform-browser
+
+import { By }
+
+component.leyenda="Proceso de carga"; <- leyenda es una propiedad de la clase
+
+const elem:HTMLElement=fixture.debugElement.query(By.css('h3')).nativeElement; 
+* Aunque es una instrucción larga siempre es igual(fijate que By me da acceso a muchos métodos,no solo a css().
+
+Puede parecer que esto dará correcto,pero Angular no dispara la detección de cambios en modo testing(fijate que en un @Input en la aplicación Angular notificará ala template si cambia esa prop,volviendo a pintar el html,etc,esto lo hace Angular en modo normal de por sí,pero no en testing:
+
+component.leyenda = 'Progreso de carga';
+* Tengo que disparar yo la detección de cambios
+fixture.detectChanges();
+/* tengo que usar by.css(selector) */
+const elem:HTMLElement = fixture.debugElement.query(By.css('h3')).nativeElement;
+expect(elem.innerHTML).toContain('Progreso de carga');
+expect(elem.outerHTML).toContain('Progreso de carga');
+
+Puedo ver que es realmente sencillo comprobar el html en una prueba de integración.Claro que la cosa se complicará.
+
+					VIDEO 303 REVISAR EL VALOR DE UN <INPUT>
+
+IMPORTANTE:disparar la detección de cambios en modo Testing es un proceso asíncrono.Para asegurarme que Angular completa toda la detección puedo usar fixture.whenStable().then(prueba) y englobar la prueba en esa promesa.
+
+El siguiente ejemplo necesitará de esto,ya que el problema es que pasamos a la prueba antes de que el input se cargue correctamente con un valor:
+
+it('Debe de mostrar en el input el valor del progreso', () => {
+  component.cambiarValor(5);
+  fixture.detectChanges();
+* Esto da problemas porque se pasa a este código sin terminar ese fixture.detectChanges:
+  const elem:HTMLInputElement = fixture.debugElement.query(By.css('input')).nativeElement; 
+console.log(elem);
+expect(elem.value).toBe('55');
+});
+
+La solución es englobarlo en ese whenStable<Promise> del objeto fixture:
+
+
+        fixture.whenStable().then(() => {
+            const elem: HTMLInputElement = fixture.debugElement.query(By.css('input')).nativeElement;
+            // console.log(elem);
+            expect(elem.value).toBe('55');
+        });
+
+Por último fijate que el h1 siempre va a ser un HTMLElement,todo es un HTMLElement,pero si puedo ser más preciso debo serlo para el autocompletado de ts.
+
+		VIDEO 204 CONFIRMAR QUE ELEMENTOS DEL HTML TENGAN LOS EVENTOS DESEADOS
+
+Sabiendo que tengo dos <button> con el evento (click)="cambiarValor()" debo aprender a testear un evento.Realmente ya sé como referenciar al elemento que tenga el evento que quiero testear.
+* Para simular un evento en Angular se usar triggerEventHandler(event,info):
+
+it('debe de llamar al (click)=cambiarValor(-5)',()=>{
+  const botones=fixture.debugElement.queryAll(By.css('button')) <- con queryAll no es nativeElement??
+ botones[0].triggerEventHandler('click',null);
+expect(component.progeso).toBe(45) <- 45 porque es 50 - 5
+
+ NOTA,en este caso,al ejecutar un click en un botón Angular se encarga de dispara la detección de cambios y no es necesario usar fixture.detectChanges() por haber disparado un click.
+Angular simplemente no utiliza algunas APIs por defecto del navegador, por ejemplo, addEventListener. en su lugar utiliza una librería llamada zone.js, en este punto hay que entender que es una zona y como interactúa con la detección de cambios
+Diría que también va a usar sus eventos sintéticos,pero con la librería zone.js.
+
+		VIDEO 305 VERIFICAR CAMBIOS EN UN ELEMENTO HTML TRAS EVENTOS
+
+Es un ejercicio combinando acceder al texto de un h3 y disparando un evento:
+
+    it('el h3 debe tener el valor correcto del progreso tras disparar un cambio',() => {
+        const botones = fixture.debugElement.queryAll(By.css('button'));
+        botones[0].triggerEventHandler('click', null);
+        fixture.detectChanges();
+        const elem: HTMLElement = fixture.debugElement.query(By.css('h3')).nativeElement;
+        expect(elem.innerHTML).toContain('45');
+    });
+
+});
+
+Fijate que si que hubo que disparar los cambios manualmente.mejor dispararlos si hay duda.Y de nuevo fijate como query().nativeElement usa nativeElement pero queryAll no.
+
+		VIDEO 306 SEPARAR LAS PRUEBAS UNITARIAS DE LAS DE INTEGRACIÓN
+
+A veces es necesario separar las pruebas según el tipo.Para ello lo que se hace es crear dos archivos,uno llamado componente.component.unit.spec.ts(es decir añadirmos .unit).
+en este archivo se pondrán las pruebas unitarias,y en el otro las de integración.Fijate que es sólo una convención,puedo usar .unitarias.spec.ts, por ejemplo,lo importante es crear dos archivos .spec diferentes.
+
+NOTA:tuve que añadir waitForAsync( () => {}) para eliminar el SPEC HAS NO LIMITATIONS.
+
+			SECCION 25 PRUEBAS DE INTEGRACIÓN INTERMEDIAS Y AVANZADAS
+
+En un aplicación real yo tendré que comprobar que una directiva exista o que el router o un componente propio de Angular exista.Simularemos estos componentes sin tener que importar todo el módulo
+
+Esta sección es un verdadero reto, especialmente entre más te vas acercando al final de la misma. Aquí veremos temas como:
+
+1- Revisar la existencia de una ruta
+2- Confirmar una directiva de Angular (router-outlet y routerLink)
+3- Errores por selectores desconocidos
+4- Reemplazar servicios de Angular por servicios falsos controlados
+5- Comprobar parámetros de elementos que retornen observables
+6- Subject
+7- Gets
+
+			VIDEO 310 PROBANDO LA EXISTENCIA DE UNA RUTA EN PARTICULAR
+
+Imaginando un arreglo de rutas como este:
+export const RUTAS: Routes = [
+  { path: "hospital", component: HospitalComponent },
+  { path: "medico/:id", component: MedicosComponent},
+  { path: "**", component:IncrementadorComponent }
+]
+¿Cómo podemos testear que una ruta de mi aplicación realmente exista?Por ejemplo,otro programador podría haber comentado una y habersele olvidado descomentarla en producción...
+La verdad es que es como testear las actions de redux,es simplemente comprobar que ese objeto exista:
+
+describe('Pruebas sobre rutas' ,() => {
+
+  it('Debe de existir la ruta medico:id', () => {
+    expect(RUTAS).toContain({ 
+      path: 'medico/:id',
+      component: MedicosComponent });    
+  })
+Ojo con los imports del componente,que también los comprueba.
+
+				VIDEO 311 PRUEBAS DE UN ROUTER-OUTLET
+
 
