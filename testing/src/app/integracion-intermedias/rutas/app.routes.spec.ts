@@ -2,10 +2,6 @@ import { MedicosComponent } from "src/app/pruebas-intermedias/03-espias/medicos.
 import { RUTAS } from "./app.routes";
 
 
-
-
-
-
 describe('Pruebas sobre rutas' ,() => {
 
   it('Debe de existir la ruta medico:id', () => {

@@ -262,6 +262,107 @@ describe('Pruebas sobre rutas' ,() => {
   })
 Ojo con los imports del componente,que también los comprueba.
 
-				VIDEO 311 PRUEBAS DE UN ROUTER-OUTLET
+			VIDEO 311 CONFIGURAR PRUEBAS DE UN ROUTERMODULE
+
+Implemento el RouterModule en el app.module.ts con las rutas anteriores:
+RouterModule.forRoot(RUTAS),
+Y en el app.component.html uso un <router-outlet>
+
+Ahora queremos testear que en el app.component existan las rutas.Bien,con todo  esto configuro una prueba de integración,pero fijate que normalmente necesitaría importar el RouterModule al archivo de testing.
+
+IMPORTANTE: Angular ya ofrece un modulo RouterTestingModule para testear rutas,ya que hacerlo sobre el RouterModule sería como testear algo de Angular que ya sé que funciona:
+
+import { RouterTestingModule } from "@angular/router/testing";
+
+describe('Pruebas de integración intermedias', () => {
+  let component: AppComponent;
+  let fixture: ComponentFixture<AppComponent>;
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      declarations: [AppComponent],
+      imports: [RouterTestingModule.withRoutes([])]
+    })
+    fixture = TestBed.createComponent(AppComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+Asi pues al testear algo sobre el router de Angular hay que usar su módulo de testing.
+Puedo ver que aparte de cambiar el modulo cambia un poco el método y no es forRoot sino withRoutes([])
+
+	VIDEO 312 PROBAR DIRECTIVAS - PROBAR QUE EXISTA <router-outlet>
+
+Hagamos nuestra primera prueba sobre directivas.Para testear sobre una directiva hay que usar la clase By pero en vez de usar css() usaremos directive():
+
+ it('debe de tener un router-outlet', () => {
+    const debugElement = fixture.debugElement.query(
+      By.directive(RouterOutlet));
+      
+    expect(debugElement).not.toBeNull();    
+  })
+
+Reactv6: exact se debe cambiar por end
+Switch se debe cambiar por routes
+activeClassName ahora es una callback que recibe className siempre
+className={({ isActive }) => isActive ? 'nav-active' : '' } 
+Recuerda que tengo un botón para subir imágenes cuando tenga dudas.
+
+		VIDEO 313 CONFIRMAR ROUTERLINK HACIA UNA RUTA CONCRETA
+
+Básicamente sería como comprobar que exista una anchor asi en donde esté la directiva RouterOutlet.Además de que exista hay que comprobar que realmente redireccione a esa ruta,claro:
+<a routerLink="/medicos">Médicos</a>
+
+NOTA:puedo usar el app.componente o crearme otro.pero tiene que tener varias rutas en su template asi:
+
+<a routerLink="/medicos">Médicos</a>
+<a routerLink="/hospital">Médicos</a>
+<a routerLink="/usuario">Médicos</a>
+<a routerLink="/perfil">Médicos</a>
+<a routerLink="/pag404">Médicos</a>
+
+Realmente lo dificíl es aprender los nombres de las directivas,y ver lo que devuelven ya que en este caso es RouterLinkWithHRef porque tiene un href:
+
+ it('debe de tener un <a> o link hacia /medicos', () => {
+    /* fijate que puede haber varios <anchor> asi que queremos*/
+    const debugElements = fixture.debugElement.queryAll(
+      By.directive(RouterLinkWithHref));
+
+       const index = debugElements.findIndex(de => de.properties['href'] === '/medicos');
+    expect(index).toBeGreaterThanOrEqual(0);
+  });
+
+NOTA:findIndex devuelve -1 si no encuentra nada,asi que me vale 0(encontró uno) o más de 0(encontró varios).Fernando usó la propiedad attributes
+
+				VIDEO 314 ERRORES POR SELECTORES DESCONOCIDOS
+
+Si por ejemplo creo un nuevo componente y lo llamo en la template fijate lo que pasa en la prueba:
+En un componente html cualquiera:
+<app-navbar><app-navbar>
+
+ERROR
+If 'app-navbar' is an Angular component, then verify that it is part of this module.
+2. If 'app-navbar' is a Web Component then add 'CUSTOM_ELEMENTS_SCHEMA' to the '@NgModule.schemas' of this component to suppress this message.
+
+¿Porqué?Porque debo declararlo en ese archivo de testing:
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      declarations: [AppComponent], <- me falta NavbarComponent
+      imports: [RouterTestingModule.withRoutes([])]
+    })
+
+Esto es una solución,si,pero y si fueran decenas de ellos?.Sería muy difícil hacer la prueba.
+Si bien es lo recomendable declarar cada componente que llame el componente que se está testeando puedo decirle a Angular que ignore cualquier selector que no conozca(realmente AppComponent va a pasar las pruebas sin usar NavbarComponent...)
+Esto se hace con la propiedad schemas y la constante NO_ERRORS_SCHEMA:
+
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+  declarations: ..., 
+  imports: ...
+  schemas: [NO_ERRORS_SCHEMA]
+
+Esa constante va a ignorar errores por cualquier selector que Angular no conozca.
+
+Recuerda que necesitaré el RouterTestingModule si voy a comprobar algo sobre la directiva RouterLinkWithHref.
+
+		VIDEO 315 PREPARANDO COMPONENTE QUE RECIBE PARÁMETROS Y NAVEGA
 
 

@@ -6,6 +6,9 @@ import { MedicosComponent } from './integracion-basicas/medicos/medicos.componen
 import { HospitalComponent } from './integracion-basicas/hospital/hospital.component';
 import { IncrementadorComponent } from './integracion-basicas/incrementador/incrementador.component';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { RUTAS } from './integracion-intermedias/rutas/app.routes';
+import { NavbarComponent } from './integracion-intermedias/navbar/navbar.component';
 
 @NgModule({
   declarations: [
@@ -13,10 +16,12 @@ import { FormsModule } from '@angular/forms';
     MedicosComponent,
     HospitalComponent,
     IncrementadorComponent,
+    NavbarComponent,
   ],
   imports: [
     BrowserModule,
     FormsModule,
+    RouterModule.forRoot(RUTAS),
   ],
   providers: [],
   bootstrap: [AppComponent]
