@@ -365,4 +365,112 @@ Recuerda que necesitaré el RouterTestingModule si voy a comprobar algo sobre la
 
 		VIDEO 315 PREPARANDO COMPONENTE QUE RECIBE PARÁMETROS Y NAVEGA
 
+Básicamente queremos un componente que rescate de la url un parámetro y que al realizar cierta acción(guardar un registro) navege(es decir que redireccionaría tras guardar exitosamente):
+  id!: string;
+  
+  constructor(
+    public router: Router,
+    public activatedRoute: ActivatedRoute
+    ) { }
 
+  ngOnInit(): void {
+    this.activatedRoute.params.subscribe(params => {
+      this.id = params.id;
+    });
+  }
+
+  guardarMedicos(): void {
+    this.router.navigate(['medico', '123']);
+  }
+Fijate que el componente tiene dos inyecciones de servicios de Angular.
+
+		VIDEO 316 REEMPLAZAR SERVICIOS DE ANGULAR POR SERVICIOS FALSOS
+
+ Realmente no nos interesa testear nada sobre el router de Angular,pues ya sabemos que funciona,asi que puedo fakear esas clases Router y ActivatedRoute en el archivo de pruebas,arriba del describe,fakeando sólo la parte que me interese:
+
+class FakeRouter {
+  navigate(params:any){
+  }
+}
+
+class FakeActivatedRoute {
+  params: Observable<any> = new Observable();
+}
+
+describe('RouterMedicosComponent', () => {
+
+  beforeEach( () => {
+    TestBed.configureTestingModule({
+      declarations: [ RouterMedicosComponent ],
+      providers:[
+        {provide: Router, useClass: FakeRouter},
+        {provide: ActivatedRoute, useClass: FakeActivatedRoute}
+      ]
+    })
+Y proveer al componente de pruebas con esas clases sustituyendo a las originales en el arreglo de providers(providers:[ {provide:...,useClass:...}]
+
+Al testear parece que tengo que usar TestBed.inject(Class) y entiendo que si esa clase está en el providers y la he definido que use una clase en concreto para suplantarla al final lo que hago es usar esa fake Class:
+
+  it('al guardar un medico debe de redireccionar a /medicos', () => {
+    // const router = TestBed.get(Router); deprecado
+    const router = TestBed.inject(Router); // ahora es inject
+    const spy = spyOn(router, 'navigate');
+
+    component.guardarMedicos();
+
+    expect(spy).toHaveBeenCalledWith(['medico', '123']);
+
+  })
+Entiendo yo que TestBed.inject(Router) va a usar la FakeRouter.Sea como sea,queda muy claro como definir una clase Fake,como definir a qué clase va a suplantar y como llamarla.
+NOTA:TestBed is a simulated environmet to run Angular2+ component tests without a browser
+
+		VIDEO 317 COMPROBAR PARÁMETROS ENVIADOS A UN OBSERVABLE
+
+En esta prueba queremos disparar el ngOnInit y suscribirnos a activatedRoute.paraams y ver que la propiedad de clase id tiene el valor de params['id'].Es má compleja por tanto.
+Vamos a necesitar insertar ese valor al Observable params para que lo retorne en nuestra clase FakeActivatedRoute:
+
+class FakeActivatedRoute {
+  params: Observable<any> = from([{id: '123'}]);
+}
+
+beforeEach( () => {
+    TestBed.configureTestingModule({
+      declarations: [ RouterMedicosComponent ],
+      providers:[
+        {provide: Router, useClass: FakeRouter},
+        {provide: ActivatedRoute, useValue: {
+          params: from([{id: '123'}])
+        }}]
+    })
+
+it('debe de colocar el id del medico en el parametro de la ruta', () => {
+    /* creamos la instancia de FakeActivatedRoute */
+    TestBed.inject(ActivatedRoute);
+    expect(component.id).toBe('123');
+  });
+
+Confirmo que TestBed.inject trae el Fake de la clase y no la clase normal.
+
+       SECCION BONUS 26 ANGULAR CON FIREBASE-FIRESTORE-HOSTING-CLOUD FUNCTIONS
+
+Vamos a ver como enlazar Angular con una DB Firestore(recuerda que usa sockets).También veremos como hacer hosting con ellos,functions,deployments...
+El objetivo fue aprender sobre cloud functions de Firebase y ciertas features más que pensó Fernando y no trabajar sobre sockets de forma fácil.
+
+La aplicación es una aplicación de votos muy bonita usando sockets.
+
+			VIDEO 322 INICIO PROYECTO - GAME OF THE YEAR 
+
+Creo una nueva aplicación y le implemento el bootstrap.Creo dos paginas,inicio y goty.Declaro sus rutas:
+const routes: Routes = [
+  { path: 'inicio',component:InicioComponent },
+  { path: 'goty',component:GotyComponent },
+  { path: '**',pathMatch:'full',redirectTo:'inicio' }
+];
+Recuerda que pathMatch a full es requerido.Recuerda que el CommonModule me da acceso al *ngIf, *ngModule.
+DAdo que vamos a usar routerLink directive en el navbar me va a pedir el RouterMOdule ese módulo.
+
+			VIDEO 324 CONFIGURACIÓN DEL GRÁFICO PRINCIPAL
+
+
+
+Aún sigues comprobando que ActivatedRoute haya pasado ese valor a la propiedad,es decir que nos hemos suscrito a params y se le ha otorgado el valor.Claro que lo suyo sería hacerlo como Fernando..
