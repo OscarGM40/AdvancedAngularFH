@@ -471,6 +471,136 @@ DAdo que vamos a usar routerLink directive en el navbar me va a pedir el RouterM
 
 			VIDEO 324 CONFIGURACIÓN DEL GRÁFICO PRINCIPAL
 
+Para instalar esta libreria que parece bastante bonita:
+npm i @swimlane/ngx-charts
+
+Ahora bien,para que esta librería funcione necesitaré del BrowserAnimationsModule(éste es parte de @angular/platform-browser) y el NgxChartsModule que es el que acabo de instalar,lógicamente,en el módulo correspondiente que use la gráfica:
+
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import{ NgxChartsModule } from '@swimlane/ngx-charts';
+
+  imports: [
+    CommonModule,
+    RouterModule,
+    BrowserAnimationsModule,
+    NgxChartsModule,
+  ],
+
+IMPORTANTE:Angular pidió instalar el cdk con <npm i @angular/cdk> y algunos type definition files.
+
+Esto hará reconocer la tag <ngx-charts-bar-vertical>,aún falta las propiedades que configuran la gráfica.
+
+Fijate que para cambiar el tipo de gráfica se cambia el selector:
+<ngx-charts-bar-horizontal> en vez de  <ngx-charts-bar-vertical>
+
+Ahora se nos presentan varios problemas como que al usar view:[number,number]=[700,400] la doy unas dimensiones y no es responsive por tanto.
+Hay que quitar esa propiedad view y darle unos estilos a un div wrapper:
+.chart-container {
+  display: inline;
+  height: 400px;
+}
+Aparte le puedo dar un color con style="fill:grey".Fijate que no conocia la propiedad fill.
+
+			VIDEO 325 CAMBIAR VALORES EN TIEMPO REAL DE MANERA LOCAL
+
+Necesito saber como cambiar los valores antes de conectarle sockets.Pudiera parecer que puedo crear un timer en el constructor que reasigne a las propiedades value de cada barra su valor,pero según la librería hay que volver a asignar todo el arreglo results []:
+
+  constructor() { 
+    
+    
+    setInterval ( () => {
+     console.log(Math.ceil(Math.random()*5).toFixed(0));
+      this.results.forEach( (element,i) => {
+        this.results[i].value = Math.ceil(Math.random()*(500)).toFixed(0);
+      });
+    }, 1000);
+  }
+
+Por último recuerda limpiar el intervalo y no dejar memory leaks.
+
+			VIDEO 326 FIREBASE Y FIRESTORE
+
+Creo un proyecto de Firebase y le agrego Firestore.Creo algunos documentos en su interfaz web con los campos id,name,votos y url.Genial
+
+			VIDEO 327 FIRESTORE FUNCTIONS
+
+Con Cloud functions puedo crear lógica extra,por ejemplo,si es un usuario que se logea por primera vez puedo definir una función para que le mande un email sólo en esa primera vez.
+Si un usuario sube una foto podría crear lógica que analice esa foto,si un usuario realiza una actualización al momento podría actualizar otra cosa,etc...
+
+NOTA:Cloud functions ya es de pago.Al parecer puedo usar Firebase Emulator suite y ejecutarlas en local.
+
+						FIREBASE EMULATOR SUITE
+
+Video:https://www.youtube.com/watch?v=pkgvFNPdiEs
+
+Puedo emular Firebase Functions(o cualquier otra feature)localmente con Firebase emulator Suite.Para ello creo un proyecto y aparte de seleccionar cualquier modulo selecciono Emulators también.
+
+Esto creará todo en mi ordenador.Para levantar la suite tengo que usar <firebase emulators:start>,con ello veré los emuladores que estoy ejecutando y sus puertos
+
+Si emulo Firestore tendré que cambiar la databaseUrl del objeto de configuración(realmente ya no lleva configuración alguna,pero el del video dejó esta configuración para desarrollo en local y otra para remoto):
+
+if(location.hostname === 'localhost' {
+ config = {
+   databaseUrl:'http://localhost:9000?ns=emulatorui'}};
+Eso sustituye al objeto config con las propiedades keys,appId,etc que se le pasa a  firebase.initializeApp(config);(fijate que podría usar todo en local,tanto las functions como la Firestore.
+TAmbién puedo exportar e importar datos a ese Emulated Firestore
+
+En cuanto a Cloud Functions me va a crear un proyecto node con varios comandos.Puedo ver que con npm run serve compilo,levanto la suite y además seleccionaré sólo Firebase Functions.Interesantísimo.
+
+  "scripts": {
+    "lint": "eslint --ext .js,.ts .",
+    "build": "tsc",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+
+Puedo ir creando funciones(ya veremos formas más complejas) y se me dará una URL local donde ver su resultado(consultar el dashboard que se crea al levantar la suite):
+ export const helloWorld = functions.https.onRequest((request, response) => {
+   functions.logger.info("Hello logs!", {structuredData: true});
+   response.json("Hola mundo desde Firebase Functions!");
+ });
 
 
-Aún sigues comprobando que ActivatedRoute haya pasado ese valor a la propiedad,es decir que nos hemos suscrito a params y se le ha otorgado el valor.Claro que lo suyo sería hacerlo como Fernando..
+Watching "/media/oscar/CRUCIALX6/AdvancedAngularFH/goty-backend/functions" for Cloud Functions...
+http function initialized (http://localhost:5001/gotyangularcloudfunctions/us-central1/helloWorld). <- ésta es la URL que creó la función(lo tengo en logs).
+
+			VIDEO 328 CREDENCIALES PARA TRABAJAR LOCAL Y REMOTAMENTE
+
+Fijate que el siguiente paso sería instalar en ese backend firebase y configurarlo,etc.Vamos a usar firebase-admin,ya que ya lo instaló firebase init:
+Le pasaré un json con mis credenciales del proyecto Firebase y ya podré usar el Firestore remoto(solo tengo esa feature activated)
+
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+/* ruta al json que generé en Proyecto/Cuentas de usuario,generar clave */
+const serviceAccount = require('./serviceAccountKey.json');
+
+/* puedo usar firebase admin y un json como credenciales */
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+// FIREBASE FUNCTIONS
+/* primero tengo que referenciar a mi FirestoreDB */
+const db = admin.firestore();
+
+ export const getGOTY = functions.https.onRequest(
+   async (request, response) => {
+    /* UNO hay que referenciar una coleccion */
+   const gotyCollectionRef = db.collection('goty');
+   
+   /* DOS capturo una snapshot de la colección en ese momento*/
+   const docsSnapshot = await gotyCollectionRef.get();
+   
+   /* TRES dentro de esa snapshots tengo la propiedad docs con todos los documentos.Pero para leer uno,es decir para leer su contenido se le debe aplicar la funcion data()  */
+   const juegos = docsSnapshot.docs.map((doc) => doc.data());
+   /* CUATRO ya puedo devolver todos los registros */
+   response.status(200).json(juegos);
+ });
+
+Fijate que no estoy usando sockets por ningun lado,simplemente estoy pidiendo una snapshot.Cambiaremos esto
+
+		VIDEO 330 SERVIDOR EXPRESS DENTRO DE FIREBASE CLOUD FUNCTIONS
+
