@@ -604,3 +604,140 @@ Fijate que no estoy usando sockets por ningun lado,simplemente estoy pidiendo un
 
 		VIDEO 330 SERVIDOR EXPRESS DENTRO DE FIREBASE CLOUD FUNCTIONS
 
+Bien,hemos visto algo sencillo,si,pero,¿que pasa si necesito validar las peticiones contra un token,crear ese jsonwebtoken,hacer peticiones POST,PUT,DELETE,...?
+ La ventaja de todo esto es que estoy en un ambiente Node,con Javascript,como puedo ver.Esto me permite poder crearme un servidor express y servicios REST:
+
+Para poder usar express,naturalmente,tendré que instalarlo en ese proyecto,pero fijate que es dentro de ese folder functions y no afuera.
+Puedo ver un warning por la diferencia de versiones de node.
+
+IMPORTANTE: recuerda que estamos trabajando en typescript,asi que necesitaré los @types de cualquier librería que instale.Entiendo que puedo instalar lo que quiera.
+
+Parece que hay que seguir esta sintaxis(import * as ... from ...):
+import * as express from "express";
+import * as cors from "cors";
+const app = express();
+app.use(cors({ origin: true }));
+
+Ahora ya puedo crearme cualquier url con la funcionalidad que quiera en su controlador:
+  app.get('/goty', async (req, res) =>{
+    /* UNO hay que referenciar una coleccion */
+    const gotyCollectionRef = db.collection('goty');
+    
+    /* DOS capturo una snapshot de la colección en ese momento*/
+    const docsSnapshot = await gotyCollectionRef.get();
+    
+    /* TRES leo todos los docs con la funcion data()  */
+    const juegos = docsSnapshot.docs.map((doc) => doc.data());
+
+    /* CUATRO ya puedo devolver todos los registros */
+    res.status(200).json(juegos);
+  })
+
+Fijate que básicamente esto es cambiar su url random por la mia.Pero ojo,aún falta decirle a Firebase que tiene un servidor express corriendo en ese backend:
+
+ export const api = functions.https.onRequest(app);
+
+Esto es asi,api y functions ya es de Firebase.Podria usar http o https:
+
+✔  functions[us-central1-getGOTY]: http function initialized (http://localhost:5001/gotyangularcloudfunctions/us-central1/getGOTY)
+✔  functions[us-central1-api]: http function initialized (http://localhost:5001/gotyangularcloudfunctions/us-central1/api)
+Puedo ver que la función creó un endpoint y express otro,pero me va a hacer falta concatenar /goty,claro:
+http://localhost:5001/gotyangularcloudfunctions/us-central1/api/goty <- url a apuntar
+
+La diferencia es que ahora tengo mi propio servidor de express,con lo cual puedo pasar la request por mis middlewares,validarla contra un token,puedo crear lo que quiera ahora.
+
+			VIDEO 331 POST: INCREMENTAR EN 1 LOS VOTOS DE UN JUEGO
+
+Realmente  es bastante sencillo lo que hay que hacer:
+  app.post('/goty/:id', async (req, res) => {
+    const id = req.params.id;
+    /* UNO referencio al game, no sólo a la collection */
+    const gameRef = db.collection('goty').doc(id);
+    
+    /* recuerda que todos los métodos get,delete,update,etc que acceden a Firebase son que realmente se comunican con Firebase y por ende son Promises */
+    const gameSnap = await gameRef.get(); <- get === await
+
+    /* si no existe el game */
+    if(!gameSnap.exists){
+      res.status(404).json({
+        ok: false,
+        message: 'No existe un juego con ese ID'
+      });
+    }
+    /* si existe el game */
+    const antes = gameSnap.data() || {votos:0};
+    /* de nuevo update es una Promise */
+    await gameRef.update({
+      votos: antes!.votos + 1
+    });
+    
+    res.json({
+      ok: true,
+      mensaje: `Gracias por tu voto a ${antes!.name}!`
+    })
+  })
+
+Prácticamente hemos terminado el backend.Recuerda que hay que compilar de nuevo.
+IMPORTANTE: en este proyecto no usamos app.use(express.json()) pero me lo pedirá el servidor en cuanto quiera leer algun body.
+
+			VIDEO 332 FIREBASE DEPLOY - SUBIR LAS NUEVAS FUNCIONES
+
+Para hacer el deploy a remoto hay que salir de /functions hasta el proyecto y hacer el deploy con <firebase deploy>.Lógicamente se necesita el plan Blaze.De momento seguiré emulando.
+
+		VIDEO 333 OBTENER Y MOSTRAR LOS JUEGOS EN LA TEMPLATE DESDE ANGULAR
+
+Lógicamente yo tendré que arrancar el backend simulado y la app de Angular.
+IMPORTANTE:Fernando comenta que las importaciones absolutas dan problemas:
+
+import { environment } from 'src/environments/environment'; <- src no va a existir asi que va a dar fallo tras el build
+import { environment } from '../../environments/environment';
+
+Comprobar que sea necesario usar relative imports.Bien,al final el servicio lucirá asi:
+
+@Injectable({ providedIn: 'root' })
+export class GameService {
+
+  constructor(private http: HttpClient) { }
+
+  getNominados() {
+    return this.http.get(`${environment.url}/api/goty`);
+  }
+
+En el archivo pertinente me traigo el servicio y creo una propiedad para la template:
+  juegos: Game[] = [];
+  
+  constructor(private gameService: GameService) { }
+
+  ngOnInit(): void {
+    this.gameService.getNominados().subscribe(gotys => {
+      this.juegos = gotys;
+    });
+  }
+
+				VIDEO 334 MOSTRAR LOS JUEGOS EN EL HTML
+
+Nos traemos una card de bootstrap e iteramos con un ngFor
+
+NOTA:fijate que cada vez que se entra a la página se dispara la petición.Podemos usar la función of y devolver el mismo contenido para no realizar tantas peticiones http:
+@Injectable({ providedIn: 'root' })
+export class GameService {
+
+  juegos: Game[] = [];
+
+  constructor(private http: HttpClient) { }
+
+  getNominados() {
+    if (this.juegos.length === 0) {
+      return of(this.juegos);
+    } else {
+      return this.http.get<Game[]>(`${environment.url}/api/goty`)
+        .pipe(tap((goty) => this.juegos = goty));
+    }
+  }
+}
+
+Esto realmente se puede comprobar desde la pestaña Network,ya que veré que la petición no se vuelve a disparar,lo cual desde luego es muy interesante.
+
+					VIDEO 335 VOTAR POR UN JUEGO 
+
+
