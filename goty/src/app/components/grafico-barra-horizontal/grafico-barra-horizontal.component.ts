@@ -1,4 +1,5 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
+import { GraphicData } from 'src/app/interfaces/graphicData.interface';
 
 
 @Component({
@@ -7,9 +8,11 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
   styleUrls: ['./grafico-barra-horizontal.component.css']
 })
 export class GraficoBarraHorizontalComponent implements OnInit, OnDestroy{
-  interval:NodeJS.Timeout ;
-
-  results: any[]=[
+  // interval:NodeJS.Timeout ;
+  @Input('data') results!: GraphicData[];
+  view: [number, number] = [ window.innerWidth/1.35, 600]; 
+  
+/*   results: any[]=[
       {
         "name": "Germany",
         "value": 40632,
@@ -26,11 +29,12 @@ export class GraficoBarraHorizontalComponent implements OnInit, OnDestroy{
         "name": "United Kingdom",
         "value": 36240,
       },
-  ]; // results es la data
+  ]; */ // results es la data
 
   //dimensions of the chart.Impiden que sea responsive
-  // view: [number, number] = [700, 400]; 
-
+  onResize(event: any) {
+    this.view = [event.target.innerWidth / 1.35, 600];
+  }
   // options
   showXAxis = true;
   showYAxis = true;
@@ -52,24 +56,23 @@ export class GraficoBarraHorizontalComponent implements OnInit, OnDestroy{
   }
 
   constructor() { 
-    
-    
-    this.interval = setInterval ( () => {
+  /*   this.interval = setInterval ( () => {
       const newResults = [...this.results];
     //  console.log(Math.ceil(Math.random()*5).toFixed(0));
       newResults.forEach( (element,i) => {
         newResults[i].value = Math.ceil(Math.random()*(500)).toFixed(0);
       });
-      // this.results = newResults;
       this.results = [...newResults];
-    }, 1500);
+    }, 1500); */
+
+
   }
 
   ngOnInit(): void {
   }
 
   ngOnDestroy(): void {
-    clearInterval(this.interval);
+    // clearInterval(this.interval);
   }
 
 }

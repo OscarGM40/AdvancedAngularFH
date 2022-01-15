@@ -740,4 +740,150 @@ Esto realmente se puede comprobar desde la pestaña Network,ya que veré que la 
 
 					VIDEO 335 VOTAR POR UN JUEGO 
 
+Recuerda que ya tengo el endpoint con la Firebase Function que incrementará en un voto el juego.Sólo hay que apuntar alli creando un método en el servicio:
 
+El servicio se comunicará con el backend de express en Firebase Functions:
+ 
+votarJuego(id: string) {
+    return this.http.post(`${environment.url}/api/goty/${id}`, {});
+  }
+}
+
+En el (click) del botón correspondiente llamamos a este método dando feedback con Sweetalert2:
+ 
+ votarJuego(juego: Game) {
+    this.gameService.votarJuego(juego.id)
+      .subscribe((resp:any) => {
+        if(resp.ok){
+          Swal.fire('Gracias',resp.mensaje,'success');
+        }
+    });
+  }
+
+			VIDEO 336 MANEJO DE ERRORES EN LA PETICIÓN
+
+Si hay un error también debemos dar feedback.Fijate que la propiedad ok viene perfecta,debería implementarla siempre que pueda.
+
+Fijate que en el backend tenemos el error gestionado asi:
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error,
+    });
+  }
+
+Asi que podemos interceptar el posible error en la petición en el método del servicio que la realiza y devolverlo como Observable:
+
+  votarJuego(id: string) {
+    return this.http.post(`${environment.url}/api/goty/${id}`, {})
+      .pipe(
+        catchError(err => {
+          return of(err.error)
+        })
+      );
+  }
+Fijate de nuevo las posibilidades que se abren al devolver ok:false y el error en una propiedad que siempre llamaré igual y obviamente usar Angular.
+Y obviamente llamo al swal en el error también:
+  if(resp.ok){
+          Swal.fire('Gracias',resp.mensaje,'success');
+        }else{
+          Swal.fire('Oops',resp.mensaje,'error');
+        }
+
+			VIDEO 337 ANGULARFIRE - OBTENER INFORMACIÓN EN TIEMPO REAL
+
+Para enlazar Firebase con Angular hay que usar AngularFire,que es la libreria/adaptador oficial.Aparte del adaptador también hay que instalar firebase.
+AngularFire trata de llevar al desarrollador hacia una experiencia más 'Angular' que si se usa el agnóstico Firebase SDK.
+
+Opcion UNO: npm install @angular/fire firebase -S
+Opcion DOS: ng add @angular/fire
+
+Al parecer ng add instalará los dos.Elegir cualquiera.Si eligo la segunda ya me va a configurar Angular los environments,el AppModule,... muy útil.
+
+Según las nuevas versiones ahora inyectaré asi:
+import { Firestore, collectionData, collection } from '@angular/fire/firestore';
+
+export class AppComponent {
+ 
+   item$: Observable<Item[]>;
+
+  constructor(firestore: Firestore) {
+    const collection = collection(firestore, 'items');
+    this.item$ = collectionData(collection); <- realmente no es exactamente asi,va a dar error por el tipado de collectionData.
+  }
+}
+
+Realmente es en el padre,es decir en inicio.component donde debería traer los datos,y pasarselos al hijo,ya que podría reutilizar ese hijo y no querré la misma data para todas las gráficas,sino que cada posible gráfica la reciba por argumento.
+Lógicamente para este ejercicio que sólo va a tener una gráfica es indiferente pero debe quedar muy claro que pedir la data en el componente hace perder la reusabilidad del mismo.Asi que inyecto alli:
+  
+constructor(firestore: Firestore) {
+    const coll = collection(firestore,'goty');
+    collectionData(coll)
+    .pipe(
+      map<DocumentData[],Game[]>(juegos => juegos as Game[]),
+      map<Game[],any[]>( (juegos) => juegos.map(juego => ({
+        name: juego.name,
+        value: juego.votos
+      }) ))).subscribe(console.log);
+    
+   }
+IMPORTANTE: cuando Firebase me dé el error Missing Permissions es por las reglas de Firebase.Además con CloudFunctions estoy con permisos de administrador asi que puedo dejarlas asi(pues un admin puede escribir):
+
+ allow read: if true;
+
+NOTA: realmente nos vendrá toda la colección,lógicamente,pero no necesitamos el id ni la imagen,solo el name y votos,asi que hay que transformar la respuesta:
+
+  constructor(firestore: Firestore) {
+    const coll = collection(firestore,'goty');
+    collectionData(coll)
+    .pipe(
+      map<DocumentData[],Game[]>(juegos => juegos as Game[]),
+      map<Game[],any[]>( (juegos) => juegos.map(juego => ({
+        name: juego.name,
+        value: juego.votos
+      }) ))).subscribe(console.log);
+    
+   }
+IMPORTANTE:como estoy ya trabajando con AngularFire,y por ende con Firestore ya estoy con sockets y realtime,asi que al realizar un cambio inmediatamente se va a disparar esa lógica de nuevo.
+
+					VIDEO 338 GRÁFICA EN TIEMPO REAL
+
+Realmente ya tenemos todo,simplemente creo una propiedad para la data y se la mando al hijo:
+ data:GraphicData[]=[];
+  <app-grafico-barra-horizontal [data]="data">
+      
+ @Input('data') results!: GraphicData[];
+Eso si,en el hijo debe llamarse results.Perfecto,al usar Firestore todo cambiará en tiempo real.
+
+IMPORTANTE: al final para hacerla responsiva he tenido que usar el evento window.resize:
+
+   <ngx-charts-bar-horizontal
+     (window:resize)="onResize($event)"
+     [view]="view"
+
+  view: [number, number] = [ window.innerWidth/1.35, 600]; 
+  
+  onResize(event: any) {
+    this.view = [event.target.innerWidth / 1.35, 600];
+  }
+Perfecto.
+
+			VIDEO 339 FIREBASE HOSTING - DESPLEGAR APLICACIÓN
+
+Firebase Hosting ofrece un hosteo gratuito.Lamentablemente el backend lo tengo en local,debería subirlo a una vps y ejecutarlo.En cuanto al frontend hago el build con ng build.
+Ahora habilito Firebase Hosting,me pedirá instalar Firebase CLI y hacer login,pero ya deberiamos estarlo:
+>firebase login
+Already logged in as oscargm28@hotmail.com
+
+Una vez logeado ya puedo implementar features con firebase init,en este caso eligo sólo Hosting
+>firebase init
+IMPORTANTE:Firebase por defecto busca siempre por la carpeta public y nosotros lo tendremos en dist/goty.Podría cambiar el outputDir de este proyecto a public,copiarlo todo a esa carpeta tras crearla,etc.. pero lo más simple es decirle que esta en /dist/goty  cuando lo pregunte.
+NOTA:nunca sobrescribir el index.html cuando lo pregunte(para que lo preguntará...)
+Tras realizar todo exitosamente sólo falta hacer el deploy con <firebase deploy>
+
+IMPORTANTE: puede que tenga que cambiar esto,si no encuentra el folder darle una ruta con ./ en vez de con /:
+{
+  "hosting": {
+    "public": "./dist/goty", (antes era /dist/goty
+ 
+Loǵicamente el backend habría que cambiarlo.La URL generada fue: https://gotyangularcloudfunctions.web.app/inicio

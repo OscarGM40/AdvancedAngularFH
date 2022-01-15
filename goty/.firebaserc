@@ -1,0 +1,14 @@
+{
+  "targets": {
+    "gotyangularcloudfunctions": {
+      "hosting": {
+        "goty": [
+          "gotyangularcloudfunctions"
+        ]
+      }
+    }
+  },
+  "projects": {
+    "default": "gotyangularcloudfunctions"
+  }
+}
